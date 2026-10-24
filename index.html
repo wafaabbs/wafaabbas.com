@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id" data-font-size="md">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wafaabbas.com | Blog Akuntansi, Pajak, & Keuangan</title>
+  <meta name="description" content="Blog edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="wafaabbas.com" />
+  <meta property="og:locale" content="id_ID" />
+  <meta property="og:title" content="wafaabbas.com | Blog Akuntansi, Pajak, &amp; Keuangan" />
+  <meta property="og:description" content="Blog edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas." />
+  <!-- Membuka koneksi lebih awal ke host yang pasti dipakai halaman ini. -->
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://sjgsrposlucbkabxaodm.supabase.co" crossorigin />
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+<div id="site-header-mount"></div>
+
+  <!-- ============================================================
+       HERO — Banner iklan
+       ============================================================ -->
+  <section class="banner-section" id="bannerSection" hidden>
+    <div class="container">
+      <div id="bannerList" class="banner-list"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       HERO — Featured articles 70/30
+       ============================================================ -->
+  <section class="site-hero">
+    <div class="container">
+      <div class="layout-hero" id="featuredSection">
+        <!-- Skeleton loading -->
+        <div class="featured-card featured-card--skeleton"></div>
+        <div class="featured-cards-stack">
+          <div class="featured-card featured-card--sm featured-card--skeleton"></div>
+          <div class="featured-card featured-card--sm featured-card--skeleton"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       MAIN CONTENT — Artikel terbaru
+       ============================================================ -->
+  <main class="container" id="main-content" tabindex="-1" style="margin-top: var(--space-10);">
+    <h1 class="visually-hidden">wafaabbas.com — Blog Akuntansi, Pajak, &amp; Keuangan</h1>
+    <section class="articles" aria-labelledby="articles-heading">
+      <div class="section-header">
+        <h2 id="articles-heading">Artikel Terbaru</h2>
+        <a href="article.html" class="link-small">Lihat semua →</a>
+      </div>
+      <div id="article-list" class="article-list" data-articles-list>
+        <!-- Loading skeleton -->
+        <div class="article-card article-card--skeleton"></div>
+        <div class="article-card article-card--skeleton"></div>
+        <div class="article-card article-card--skeleton"></div>
+      </div>
+    </section>
+  </main>
+
+<div id="site-footer-mount"></div>
+
+  <script src="components/header.js"></script>
+  <script src="components/font-size-toggle.js"></script>
+  <script src="components/translate.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="services/supabase.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

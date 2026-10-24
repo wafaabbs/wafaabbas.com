@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Menu | Wafa Abbas CMS</title>
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <span class="admin-brand-mark">W</span>
+        <div>
+          <strong>Wafa Abbas</strong>
+          <small>Content Studio</small>
+        </div>
+      </div>
+
+      <nav class="admin-nav" aria-label="Admin navigation">
+        <a href="./dashboard.html" class="admin-nav-link">Dashboard</a>
+        <a href="./posts.html" class="admin-nav-link">Posts</a>
+        <a href="./categories.html" class="admin-nav-link">Kategori</a>
+        <a href="./menus.html" class="admin-nav-link">Menu</a>
+        <a href="../index.html" class="admin-nav-link">View Site</a>
+      </nav>
+
+      <button type="button" class="admin-ghost-button" id="logoutButton">
+        Logout
+      </button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <p class="admin-kicker">CMS</p>
+          <h1>Menu Navigasi</h1>
+        </div>
+      </header>
+
+      <div class="admin-categories-layout">
+
+        <!-- Form tambah / edit menu -->
+        <section class="admin-panel">
+          <div class="admin-panel-header">
+            <div>
+              <h2 id="menuFormTitle">Tambah Item Menu</h2>
+              <p>Isi label, URL, dan parent (opsional).</p>
+            </div>
+          </div>
+
+          <div class="admin-editor-settings">
+            <input type="hidden" id="menuIdInput" />
+
+            <label class="admin-field">
+              <span>Label</span>
+              <input
+                type="text"
+                id="menuLabelInput"
+                placeholder="Contoh: Akuntansi"
+              />
+            </label>
+
+            <label class="admin-field">
+              <span>URL</span>
+              <input
+                type="text"
+                id="menuUrlInput"
+                placeholder="Contoh: category.html?slug=akuntansi"
+              />
+              <small class="admin-field-hint">
+                URL relatif (misal: article.html) atau absolut (https://...).
+              </small>
+            </label>
+
+            <label class="admin-field">
+              <span>Urutan</span>
+              <input
+                type="number"
+                id="menuOrderInput"
+                placeholder="0"
+                min="0"
+                value="0"
+              />
+              <small class="admin-field-hint">
+                Angka lebih kecil tampil lebih dulu.
+              </small>
+            </label>
+
+            <label class="admin-field">
+              <span>Parent (Submenu dari)</span>
+              <select id="menuParentInput">
+                <option value="">— Tidak ada (menu utama) —</option>
+              </select>
+            </label>
+
+            <p class="admin-form-message" id="menuMessage"></p>
+
+            <div class="admin-category-form-actions">
+              <button type="button" class="admin-primary-button" id="saveMenuButton">
+                Simpan
+              </button>
+              <button type="button" class="admin-secondary-button" id="resetMenuButton" hidden>
+                Batal Edit
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Daftar menu -->
+        <section class="admin-panel">
+          <div class="admin-panel-header">
+            <div>
+              <h2>Struktur Menu</h2>
+              <p>Klik Edit untuk mengubah urutan atau hierarki.</p>
+            </div>
+          </div>
+
+          <div id="menuList" class="admin-category-list">
+            <p class="admin-muted" style="padding:16px;">Memuat menu...</p>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="../services/supabase.js"></script>
+  <script src="../assets/js/admin-menus.js"></script>
+</body>
+</html>

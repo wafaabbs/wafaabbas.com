@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kategori | wafaabbas.com</title>
+  <meta name="description" content="Artikel berdasarkan kategori di wafaabbas.com." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="wafaabbas.com" />
+  <meta property="og:locale" content="id_ID" />
+  <meta property="og:title" content="Kategori | wafaabbas.com" />
+  <meta property="og:description" content="Artikel berdasarkan kategori di wafaabbas.com." />
+  <!-- Membuka koneksi lebih awal ke host yang pasti dipakai halaman ini. -->
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://sjgsrposlucbkabxaodm.supabase.co" crossorigin />
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+<div id="site-header-mount"></div>
+
+  <main class="container" id="main-content" tabindex="-1">
+
+    <!-- Breadcrumb -->
+    <nav class="category-breadcrumb" id="categoryBreadcrumb" aria-label="Breadcrumb">
+      <a href="index.html">Beranda</a>
+    </nav>
+
+    <!-- Hero kategori -->
+    <section class="hero">
+      <h1 id="categoryTitle">Memuat kategori...</h1>
+      <p class="muted" id="categoryDescription"></p>
+    </section>
+
+    <!-- Sub-kategori -->
+    <section id="subCategorySection" hidden>
+      <div class="section-header">
+        <h2 class="section-title">Sub-kategori</h2>
+      </div>
+      <div id="subCategoryList" class="category-chip-list"></div>
+    </section>
+
+    <!-- Daftar artikel -->
+    <section class="articles" style="margin-top: 24px;">
+      <div class="section-header">
+        <h2 class="section-title" id="articleSectionTitle">Artikel</h2>
+        <a href="article.html" class="link-small">Semua artikel</a>
+      </div>
+
+      <div id="categoryArticleList" class="article-list">
+        <article class="article-card">
+          <h3>Memuat artikel...</h3>
+          <p>Mohon tunggu sebentar.</p>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+<div id="site-footer-mount"></div>
+
+  <script src="components/header.js"></script>
+  <script src="components/font-size-toggle.js"></script>
+  <script src="components/translate.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="services/supabase.js"></script>
+  <script src="assets/js/category.js"></script>
+</body>
+</html>

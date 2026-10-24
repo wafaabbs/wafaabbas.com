@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+*.log
+
+# Rekaman trafik browser (HAR) — bisa memuat data sesi/pihak ketiga, jangan dipublikasikan
+*.har
+
+# Node (kalau nanti kita pakai tooling)
+node_modules/
+dist/
