@@ -156,6 +156,40 @@ try {
     t.ok(await b.eval(`[...document.querySelectorAll('.card--hero .card__title')].every(e => e.scrollHeight <= e.clientHeight + 2)`), "judul hero tidak terpotong pada judul fixture");
   });
 
+  await t.section("Mode gelap/terang, ukuran teks, logo merek", async () => {
+    await b.open("/index.html", { seed: seed(), width: 1280, height: 800, colorScheme: "dark" });
+    t.eq(await b.eval(`document.documentElement.dataset.theme`), "dark", "tanpa pilihan tersimpan: mengikuti sistem gelap");
+    await b.open("/index.html", { seed: seed(), width: 1280, height: 800 });
+    await b.waitFor(`document.querySelector('#site-header [data-theme-toggle]')`);
+    t.eq(await b.eval(`document.documentElement.dataset.theme`), "light", "default terang bila sistem terang");
+    const bgLight = await b.eval(`getComputedStyle(document.body).backgroundColor`);
+    await b.click(`.site-navbar [data-theme-toggle]`);
+    t.eq(await b.eval(`document.documentElement.dataset.theme`), "dark", "klik -> mode gelap");
+    t.ok((await b.eval(`getComputedStyle(document.body).backgroundColor`)) !== bgLight, "warna latar berubah");
+    t.eq(await b.eval(`document.querySelector('.site-navbar [data-theme-toggle]').getAttribute('aria-pressed')`), "true", "aria-pressed mengikuti");
+    t.ok(/terang/.test(await b.eval(`document.querySelector('.site-navbar [data-theme-toggle]').getAttribute('aria-label')`)), "label menawarkan mode terang");
+    await b.open("/article.html", { seed: "", clearStorage: false, width: 1280, height: 800 });
+    t.eq(await b.eval(`document.documentElement.dataset.theme`), "dark", "pilihan tersimpan antar-halaman (tanpa kedip: diset sebelum render)");
+    const contrast = await b.eval(`(()=>{const c=(s)=>s.match(/[0-9.]+/g).slice(0,3).map(Number);const L=([r,g,b])=>{const f=(v)=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b)};const a=L(c(getComputedStyle(document.body).color)),d=L(c(getComputedStyle(document.body).backgroundColor));return (Math.max(a,d)+0.05)/(Math.min(a,d)+0.05)})()`);
+    t.ok(contrast >= 7, `kontras teks utama mode gelap ${contrast.toFixed(1)}:1 (>= 7)`);
+    await b.click(`.site-header__mobile [data-theme-toggle], .site-navbar [data-theme-toggle]`);
+    t.eq(await b.eval(`document.documentElement.dataset.theme`), "light", "klik lagi -> terang");
+    // ukuran teks: kontrol segmen
+    await b.click(`.site-navbar [data-font-set=lg]`);
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "lg", "ukuran teks besar");
+    t.eq(await b.eval(`document.querySelector('.site-navbar [data-font-set=lg]').getAttribute('aria-pressed')`), "true", "segmen aktif ditandai");
+    await b.open("/about.html", { seed: "", clearStorage: false });
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "lg", "ukuran teks tersimpan");
+    // logo merek asli
+    t.eq(await b.eval(`document.querySelectorAll('#site-header .site-header__side .brand-icon').length`), 3, "3 logo merek (LinkedIn, Instagram, WhatsApp) di header");
+    t.ok(await b.eval(`[...document.querySelectorAll('.brand-icon')].every(e=>getComputedStyle(e).maskImage.includes('/assets/icons/') || getComputedStyle(e).webkitMaskImage.includes('/assets/icons/'))`), "logo memakai berkas di assets/icons/");
+    t.ok(await b.eval(`[...document.querySelectorAll('#site-header .brand-btn')].every(a=>a.getAttribute('aria-label')&&a.getBoundingClientRect().width>=40)`), "tombol sosial berlabel & area sentuh >= 40px");
+    // mobile: tombol tema di bilah atas (tanpa membuka drawer)
+    await b.open("/index.html", { seed: seed(), width: 390, height: 844, mobile: true });
+    await b.waitFor(`document.querySelector('.site-header__mobile [data-theme-toggle]')`);
+    t.ok(await b.eval(`(()=>{const r=document.querySelector('.site-header__mobile [data-theme-toggle]').getBoundingClientRect();return r.width>=40&&r.height>=40&&r.top<80})()`), "mobile: tombol tema di bilah atas, area sentuh memadai");
+  });
+
   await t.section("Mobile: drawer, tanpa overflow horizontal", async () => {
     await b.open("/index.html", { seed: seed(), width: 390, height: 844, mobile: true });
     await b.waitFor(`document.querySelector('#home-main .card')`);

@@ -1,0 +1,77 @@
+/* =====================================================================
+   MODE GELAP — hanya menimpa token semantik dan beberapa komponen yang memakai --ink-900 sebagai warna depan.
+   Header, footer, hero, dan panel gelap memang sudah gelap sehingga tidak diubah.
+   Dimuat paling akhir. Diaktifkan oleh :root[data-theme="dark"] (assets/js/theme-init.js + components/theme.js).
+   ===================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0a141c;
+  --surface: #11212d;
+  --surface-sunken: #0d1a24;
+  --line: #1f3443;
+  --line-strong: #31495b;
+  --text: #e8eef3;
+  --text-soft: #bac7d1;
+  --text-muted: #8fa2b0;
+  --link: #9be15f;
+  --link-hover: #c2f09a;
+  --accent-700: #9be15f;             /* dipakai sebagai warna teks aksen di latar terang -> di gelap memakai versi cerah */
+  --accent-100: rgb(129 215 66 / 0.14);
+  --danger-500: #ff8f85;  --danger-100: #3b1916;
+  --success-500: #78e096; --success-100: #12311d;
+  --warning-500: #f4c95d; --warning-100: #3a2d0d;
+  --info-100: #12293a;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 6px 16px rgb(0 0 0 / 0.45);
+}
+:root[data-theme="dark"] ::selection { background: var(--accent-500); color: #06141e; }
+
+/* tombol & kontrol yang memakai --ink-900 sebagai latar/tepi */
+[data-theme="dark"] .btn { background: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .btn:hover { background: var(--accent-400); color: #06141e; }
+[data-theme="dark"] .btn--accent { background: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .btn--outline { background: transparent; color: var(--text); border-color: var(--line-strong); }
+[data-theme="dark"] .btn--outline:hover { background: var(--accent-500); border-color: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .btn--ghost { color: var(--text-soft); }
+[data-theme="dark"] .btn--danger { background: #b42318; color: #fff; }
+[data-theme="dark"] .btn--outline-accent, [data-theme="dark"] .btn--outline-light { background: transparent; }
+[data-theme="dark"] .chip:hover { border-color: var(--accent-500); color: var(--text); }
+[data-theme="dark"] .chip[aria-current="true"], [data-theme="dark"] .chip.is-active { background: var(--accent-500); border-color: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .breadcrumbs a:hover, [data-theme="dark"] .toc a:hover, [data-theme="dark"] .toc a.is-active { color: var(--text); }
+[data-theme="dark"] .pagination a:hover { border-color: var(--accent-500); color: var(--text); }
+[data-theme="dark"] .pagination [aria-current="page"] { background: var(--accent-500); border-color: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .section-head, [data-theme="dark"] .about-section > h2 { border-bottom-color: var(--accent-500); }
+[data-theme="dark"] .checkbox input, [data-theme="dark"] .check input { accent-color: var(--accent-500); }
+[data-theme="dark"] .widget--dark { background: var(--ink-800); border-color: var(--ink-700); }
+[data-theme="dark"] .skeleton { background: linear-gradient(100deg, var(--surface-sunken) 30%, #16293a 50%, var(--surface-sunken) 70%); background-size: 200% 100%; }
+[data-theme="dark"] .notfound__code { color: var(--text); }
+[data-theme="dark"] .notfound__code span { -webkit-text-stroke-color: var(--text); }
+[data-theme="dark"] .prose a:hover { background: var(--accent-100); text-decoration-color: var(--accent-500); }
+[data-theme="dark"] .prose code:not(pre code) { background: var(--surface-sunken); }
+[data-theme="dark"] .card__media { background: var(--surface-sunken); }
+[data-theme="dark"] .toast { background: #1b3346; }
+[data-theme="dark"] .modal { background: rgb(0 0 0 / 0.65); }
+[data-theme="dark"] .alert--info { border-color: #284a63; color: var(--text); }
+[data-theme="dark"] .alert--warn { border-color: #6b5316; }
+[data-theme="dark"] .alert--error { border-color: #6b2a24; }
+[data-theme="dark"] .alert--ok { border-color: #1f5a33; }
+[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { color-scheme: dark; }
+[data-theme="dark"] .input, [data-theme="dark"] .field input, [data-theme="dark"] .field select, [data-theme="dark"] .field textarea { background: var(--surface-sunken); color: var(--text); }
+
+/* panel admin */
+[data-theme="dark"] .admin-body { background: var(--paper); }
+[data-theme="dark"] .mrow[data-sub] { background: var(--surface-sunken); }
+[data-theme="dark"] .mrow { border-left-color: var(--accent-500); }
+[data-theme="dark"] .icon-btn:not(.brand-btn):not(.theme-toggle) { color: var(--text); }
+[data-theme="dark"] .admin .icon-btn { background: var(--surface); }
+[data-theme="dark"] .icon-btn--danger { color: var(--danger-500); }
+[data-theme="dark"] .tabs__tab[aria-selected="true"] { color: var(--text); }
+[data-theme="dark"] .mde__tabs button[aria-selected="true"] { background: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .mde__ta { background: var(--surface-sunken); color: var(--text); }
+[data-theme="dark"] .table thead th { background: var(--surface-sunken); }
+[data-theme="dark"] .toolbar input, [data-theme="dark"] .toolbar select, [data-theme="dark"] .slot select, [data-theme="dark"] .thumb-controls input[type=url] { background: var(--surface-sunken); color: var(--text); border-color: var(--line-strong); }
+[data-theme="dark"] .login__card { background: var(--surface); }
+[data-theme="dark"] .btn--outline-accent { color: var(--accent-500); border-color: var(--accent-500); }
+[data-theme="dark"] .btn--outline-accent:hover { background: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .btn--outline-light { color: #fff; border-color: rgb(255 255 255 / 0.55); }
+[data-theme="dark"] .btn--outline-light:hover { background: #fff; color: var(--ink-900); }

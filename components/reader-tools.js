@@ -1,33 +1,30 @@
-// Alat baca: ukuran teks (A−/A+) dan bahasa (ID/EN via Google Translate bila pembaca memilih EN).
+// Alat baca: ukuran teks (kontrol segmen 3 langkah) dan bahasa (ID/EN via Google Translate bila pembaca memilih EN).
 // Preferensi disimpan di localStorage (dibungkus try/catch: boleh gagal tanpa merusak halaman).
 
 import { html } from "../core/dom.js";
 
-const SIZES = ["sm", "md", "lg", "xl"];
+const SIZES = ["sm", "md", "lg"];
 const SIZE_KEY = "wafa_font_size";
 const LANG_KEY = "wafa_lang";
 const PAGE_LANG = "id";
 const TARGET_LANG = "en";
-const LABELS = { sm: "A−", md: "A", lg: "A+", xl: "A++" };
+const NAMES = { sm: "kecil", md: "sedang", lg: "besar" };
 
 const read = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 const write = (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* abaikan */ } };
 
 // ---------------------------------------------------------------- ukuran teks
-export function getFontSize() { const v = read(SIZE_KEY); return SIZES.includes(v) ? v : "md"; }
+export function getFontSize() { const v = read(SIZE_KEY); return v === "xl" ? "lg" : SIZES.includes(v) ? v : "md"; }
 
 export function applyFontSize(size = getFontSize()) {
   document.documentElement.dataset.fontSize = size;
-  document.querySelectorAll("[data-font-label]").forEach((l) => { l.textContent = LABELS[size]; });
-  document.querySelectorAll("[data-font-dec]").forEach((b) => { b.disabled = size === SIZES[0]; });
-  document.querySelectorAll("[data-font-inc]").forEach((b) => { b.disabled = size === SIZES[SIZES.length - 1]; });
+  document.querySelectorAll("[data-font-set]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.fontSet === size)));
 }
 
-function stepFont(delta) {
-  const i = SIZES.indexOf(getFontSize()) + delta;
-  if (i < 0 || i >= SIZES.length) return;
-  write(SIZE_KEY, SIZES[i]);
-  applyFontSize(SIZES[i]);
+function setFont(size) {
+  if (!SIZES.includes(size)) return;
+  write(SIZE_KEY, size);
+  applyFontSize(size);
 }
 
 // ---------------------------------------------------------------- bahasa
@@ -70,10 +67,8 @@ function toggleLang() {
 export function readerToolsHtml() {
   const en = getLang() === TARGET_LANG;
   return html`
-    <div class="tool-group" role="group" aria-label="Ukuran teks">
-      <button type="button" class="pill-btn" data-font-dec aria-label="Perkecil teks">A−</button>
-      <span class="tool-group__label" data-font-label aria-live="polite">${LABELS[getFontSize()]}</span>
-      <button type="button" class="pill-btn" data-font-inc aria-label="Perbesar teks">A+</button>
+    <div class="seg" role="group" aria-label="Ukuran teks">
+      ${SIZES.map((z) => html`<button type="button" class="seg__btn seg__btn--${z}" data-font-set="${z}" aria-pressed="${getFontSize() === z}" aria-label="Teks ${NAMES[z]}" title="Teks ${NAMES[z]}"><span aria-hidden="true">A</span></button>`)}
     </div>
     <button type="button" class="pill-btn" data-lang-toggle aria-label="${en ? "Ganti ke Bahasa Indonesia" : "Switch to English"}">${en ? "ID" : "EN"}</button>`;
 }
@@ -85,10 +80,9 @@ export function bindReaderTools() {
   if (bound) return;
   bound = true;
   document.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-font-dec],[data-font-inc],[data-lang-toggle]");
+    const t = e.target.closest("[data-font-set],[data-lang-toggle]");
     if (!t) return;
-    if (t.hasAttribute("data-font-dec")) stepFont(-1);
-    else if (t.hasAttribute("data-font-inc")) stepFont(1);
+    if (t.hasAttribute("data-font-set")) setFont(t.dataset.fontSet);
     else toggleLang();
   });
   syncCookie();

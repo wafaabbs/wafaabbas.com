@@ -155,3 +155,5 @@ body.admin-body { background: var(--surface-sunken); }
 #admin-shell { display: contents; }
 
 .admin__nav a, .admin__brand, .admin__side-foot a, .stat, .btn { text-decoration: none; }
+.admin__tools { display: flex; align-items: center; gap: var(--space-2); }
+.admin__tools .theme-toggle { color: #fff; background: transparent; border-color: rgb(255 255 255 / 0.4); }

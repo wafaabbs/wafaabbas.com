@@ -6,6 +6,7 @@ import { SITE } from "../../core/config.js";
 import { pathTo } from "../../core/url.js";
 import * as auth from "../../services/auth.js";
 import { icon } from "../../components/icons.js";
+import { themeToggleHtml, bindTheme } from "../../components/theme.js";
 import { toast, messageOf } from "./ui.js";
 
 const NAV = [
@@ -39,9 +40,10 @@ export async function bootAdmin(active) {
       <div class="admin__side-foot">
         <a href="${pathTo("index.html")}" target="_blank" rel="noopener">Lihat situs ${icon("arrowRight", { size: 14 })}</a>
         <div class="admin__user" title="${user.email}">${user.email}</div>
-        <button type="button" class="btn btn--outline-light btn--sm" id="admin-logout">Keluar</button>
+        <div class="admin__tools">${themeToggleHtml()}<button type="button" class="btn btn--outline-light btn--sm" id="admin-logout">Keluar</button></div>
       </div>
     </aside>`);
+  bindTheme();
   document.getElementById("admin-logout").addEventListener("click", async (e) => {
     e.currentTarget.disabled = true;
     await auth.logout("./login.html");

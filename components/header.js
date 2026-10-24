@@ -12,6 +12,7 @@ import { getPublicTree } from "../services/menus.js";
 import { icon } from "./icons.js";
 import { readerToolsHtml, bindReaderTools } from "./reader-tools.js";
 import { searchOverlayHtml, bindSearch } from "./search.js";
+import { themeToggleHtml, bindTheme } from "./theme.js";
 
 export const LOGO_WHITE = () => pathTo("assets/images/logo/wafa-logo-white.svg");
 
@@ -51,8 +52,8 @@ function drawerItem(node, index) {
 
 export function socialLinksHtml({ size = 18 } = {}) {
   const ico = { linkedin: "linkedin", instagram: "instagram" };
-  return html`${SITE.social.map((s) => html`<a class="icon-btn" href="${s.url}" target="_blank" rel="noopener noreferrer" aria-label="${s.label}">${icon(ico[s.id] || "link", { size })}</a>`)}
-    <a class="icon-btn" href="${SITE.contact.whatsapp.url}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">${icon("whatsapp", { size })}</a>`;
+  return html`${SITE.social.map((s) => html`<a class="icon-btn brand-btn brand-btn--${s.id}" href="${s.url}" target="_blank" rel="noopener noreferrer" aria-label="${s.label}">${icon(ico[s.id] || "link", { size })}</a>`)}
+    <a class="icon-btn brand-btn brand-btn--whatsapp" href="${SITE.contact.whatsapp.url}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">${icon("whatsapp", { size })}</a>`;
 }
 
 function shellHtml(tree) {
@@ -66,6 +67,7 @@ function shellHtml(tree) {
           <a class="btn btn--outline-accent btn--sm" href="${pathTo("contact.html")}">Hubungi Saya</a>
         </div>
         <div class="site-header__mobile">
+          ${themeToggleHtml()}
           <button type="button" class="icon-btn" data-search-open aria-label="Cari artikel">${icon("search")}</button>
           <button type="button" class="icon-btn" data-drawer-open aria-controls="site-drawer" aria-expanded="false" aria-label="Buka menu">${icon("menu", { size: 24 })}</button>
         </div>
@@ -76,6 +78,7 @@ function shellHtml(tree) {
         <nav aria-label="Navigasi utama"><ul class="site-nav__list" data-nav-list>${tree.map(desktopItem)}</ul></nav>
         <div class="site-nav__tools" data-reader-tools>
           ${readerToolsHtml()}
+          ${themeToggleHtml()}
           <button type="button" class="icon-btn" data-search-open aria-label="Cari artikel">${icon("search")}</button>
         </div>
       </div>
@@ -91,7 +94,7 @@ function shellHtml(tree) {
           <input class="input" id="drawer-q" name="q" type="search" placeholder="Cari artikel…" autocomplete="off">
           <button type="submit" class="btn btn--accent btn--sm" aria-label="Cari">${icon("search", { size: 18 })}</button>
         </form>
-        <div class="drawer__tools">${readerToolsHtml()}</div>
+        <div class="drawer__tools">${readerToolsHtml()}${themeToggleHtml()}</div>
         <a class="btn btn--accent btn--block" href="${pathTo("contact.html")}">Hubungi Saya</a>
         <div class="drawer__social">${socialLinksHtml({ size: 20 })}</div>
       </div>
@@ -187,6 +190,7 @@ export async function mountHeader(rootId = "site-header") {
   root.dataset.menuSource = "fallback";
   bindHeader(root);
   bindReaderTools();
+  bindTheme();
   bindSearch();
 
   try {

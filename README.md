@@ -13,8 +13,10 @@ Situs edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas. HTML + CSS + 
 ```
 index.html article.html category.html page.html about.html contact.html tools.html 404.html
 admin/                 login, dashboard, posts, editor, categories, menus, pages, home  (semua noindex)
-assets/css/            tokens → base → layout → components → pages   (+ admin.css untuk panel)
+assets/css/            tokens → base → layout → components → pages → theme-dark   (+ admin.css untuk panel)
 assets/fonts/          Plus Jakarta Sans & Newsreader (OFL, self-hosted)
+assets/icons/         logo merek asli (LinkedIn, Instagram, WhatsApp)
+assets/js/theme-init.js  skrip sinkron mode gelap/terang (anti-kedip)
 assets/images/        logo (SVG), favicon, apple-touch-icon, og-image, placeholder thumbnail
 core/                  config, dom (html`` auto-escape), url (allowlist tautan), format, markdown (aman), seo
 services/              akses Supabase per domain: client, auth, articles, categories, menus, pages, featured, banners, storage

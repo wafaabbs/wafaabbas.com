@@ -220,3 +220,33 @@ body { top: 0 !important; }
 .home-sections { display: grid; gap: var(--space-12); }
 .card--hero .card__meta { margin-top: 0; }
 @media (max-width: 560px) { .card--hero .card__title { -webkit-line-clamp: 5; } }
+
+/* ---- logo merek asli (glyph di assets/icons/, diwarnai lewat mask) ---- */
+.brand-icon { display: inline-block; flex: none; width: var(--s, 20px); height: var(--s, 20px); background: currentColor;
+  -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.brand-icon--linkedin { -webkit-mask-image: url("../icons/linkedin.svg"); mask-image: url("../icons/linkedin.svg"); }
+.brand-icon--instagram { -webkit-mask-image: url("../icons/instagram.svg"); mask-image: url("../icons/instagram.svg"); }
+.brand-icon--whatsapp { -webkit-mask-image: url("../icons/whatsapp.svg"); mask-image: url("../icons/whatsapp.svg"); }
+.brand-btn { color: #fff; border-radius: 50%; }
+.brand-btn--linkedin { background: #0a66c2; }
+.brand-btn--instagram { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+.brand-btn--whatsapp { background: #25d366; }
+.icon-btn.brand-btn:hover { color: #fff; filter: brightness(1.12); transform: translateY(-1px); }
+.icon-btn.brand-btn { width: 40px; height: 40px; transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease); }
+
+/* ---- ukuran teks: kontrol segmen ---- */
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-pill); background: rgb(255 255 255 / 0.08); border: 1px solid rgb(255 255 255 / 0.18); }
+.seg__btn { display: grid; place-items: center; width: 34px; height: 28px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-200); font-weight: var(--weight-bold); line-height: 1; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.seg__btn--sm span { font-size: 0.72rem; }
+.seg__btn--md span { font-size: 0.92rem; }
+.seg__btn--lg span { font-size: 1.15rem; }
+.seg__btn:hover { color: #fff; }
+.seg__btn[aria-pressed="true"] { background: var(--accent-500); color: var(--ink-900); }
+
+/* ---- sakelar tema ---- */
+.theme-toggle { border: 1px solid rgb(255 255 255 / 0.2); border-radius: 50%; }
+.theme-toggle__moon { display: none; }
+:root[data-theme="dark"] .theme-toggle__sun { display: none; }
+:root[data-theme="dark"] .theme-toggle__moon { display: inline-grid; }
+.theme-toggle__sun, .theme-toggle__moon { display: inline-grid; place-items: center; }
+:root:not([data-theme="dark"]) .theme-toggle__moon { display: none; }

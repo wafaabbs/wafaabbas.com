@@ -115,7 +115,8 @@ export async function launch({ origin, sdkSource }) {
   const api = {
     state,
     /** Buka halaman dengan seed (JS yang dijalankan sebelum skrip halaman). */
-    async open(urlPath, { seed = "", width = 1280, height = 900, mobile = false, clearStorage = true } = {}) {
+    async open(urlPath, { seed = "", width = 1280, height = 900, mobile = false, clearStorage = true, colorScheme = "light" } = {}) {
+      await cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: colorScheme }] });
       state.errors.length = 0; state.blocked.length = 0; state.requests.length = 0;
       await cdp.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile });
       if (seedId) await cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: seedId });
