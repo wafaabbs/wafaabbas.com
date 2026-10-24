@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <title>Posts | Wafa Abbas CMS</title>
+
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <div>
+      <h1>Posts</h1>
+      <p>Kelola artikel website.</p>
+    </div>
+
+    <nav class="admin-nav">
+  <a href="./dashboard.html">Dashboard</a>
+  <a href="./posts.html">Posts</a>
+  <a href="./categories.html">Kategori</a>
+  <a href="../index.html">View Site</a>
+  <button type="button" id="logoutButton">Logout</button>
+</nav>
+  </header>
+
+  <main class="admin-container">
+    <section class="admin-actions">
+      <div>
+        <h2>Daftar Artikel</h2>
+        <p id="postsSummary">Memuat artikel...</p>
+      </div>
+
+      <a href="./editor.html" class="admin-button-primary">New Post</a>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-filters">
+        <input
+          type="search"
+          id="postSearchInput"
+          placeholder="Cari artikel..."
+          autocomplete="off"
+        />
+
+        <select id="postStatusFilter">
+          <option value="">Semua status</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
+        </select>
+      </div>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Judul</th>
+              <th>Kategori</th>
+              <th>Status</th>
+              <th>Update</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="postsTableBody">
+            <tr>
+              <td colspan="5">Memuat artikel...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="../services/supabase.js"></script>
+  <script src="../assets/js/admin-posts.js"></script>
+</body>
+</html>

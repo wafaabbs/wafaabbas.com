@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Kategori | Wafa Abbas CMS</title>
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <span class="admin-brand-mark">W</span>
+        <div>
+          <strong>Wafa Abbas</strong>
+          <small>Content Studio</small>
+        </div>
+      </div>
+
+      <nav class="admin-nav" aria-label="Admin navigation">
+        <a href="./dashboard.html" class="admin-nav-link">Dashboard</a>
+        <a href="./posts.html" class="admin-nav-link">Posts</a>
+        <a href="./categories.html" class="admin-nav-link">Kategori</a>
+        <a href="../index.html" class="admin-nav-link">View Site</a>
+      </nav>
+
+      <button type="button" class="admin-ghost-button" id="logoutButton">
+        Logout
+      </button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <p class="admin-kicker">CMS</p>
+          <h1>Kategori</h1>
+        </div>
+      </header>
+
+      <div class="admin-categories-layout">
+
+        <!-- Form tambah / edit kategori -->
+        <section class="admin-panel">
+          <div class="admin-panel-header">
+            <div>
+              <h2 id="categoryFormTitle">Tambah Kategori</h2>
+              <p>Isi nama dan pilih induk (opsional).</p>
+            </div>
+          </div>
+
+          <div class="admin-editor-settings">
+            <input type="hidden" id="categoryIdInput" />
+
+            <label class="admin-field">
+              <span>Nama</span>
+              <input
+                type="text"
+                id="categoryNameInput"
+                placeholder="Contoh: PPh 21"
+              />
+            </label>
+
+            <label class="admin-field">
+              <span>Slug</span>
+              <input
+                type="text"
+                id="categorySlugInput"
+                placeholder="pph-21"
+              />
+              <small class="admin-field-hint">
+                Diisi otomatis dari nama. Bisa diubah manual.
+              </small>
+            </label>
+
+            <label class="admin-field">
+              <span>Induk (Parent)</span>
+              <select id="categoryParentInput">
+                <option value="">— Tidak ada (kategori utama) —</option>
+              </select>
+            </label>
+
+            <p class="admin-form-message" id="categoryMessage"></p>
+
+            <div class="admin-category-form-actions">
+              <button type="button" class="admin-primary-button" id="saveCategoryButton">
+                Simpan
+              </button>
+              <button type="button" class="admin-secondary-button" id="resetCategoryButton" hidden>
+                Batal Edit
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Daftar kategori -->
+        <section class="admin-panel">
+          <div class="admin-panel-header">
+            <div>
+              <h2>Daftar Kategori</h2>
+              <p>Klik Edit untuk mengubah atau menyusun hierarki.</p>
+            </div>
+          </div>
+
+          <div id="categoryList" class="admin-category-list">
+            <p class="admin-muted" style="padding:16px;">Memuat kategori...</p>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="../services/supabase.js"></script>
+  <script src="../assets/js/admin-categories.js"></script>
+</body>
+</html>

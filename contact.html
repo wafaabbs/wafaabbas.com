@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kontak | wafaabbas.com</title>
+  <meta name="description" content="Hubungi Wafa Abbas untuk konsultasi pajak, akuntansi, atau pelatihan keuangan." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="wafaabbas.com" />
+  <meta property="og:locale" content="id_ID" />
+  <meta property="og:title" content="Kontak | wafaabbas.com" />
+  <meta property="og:description" content="Hubungi Wafa Abbas untuk konsultasi pajak, akuntansi, atau pelatihan keuangan." />
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+<div id="site-header-mount"></div>
+
+  <main class="container" id="main-content" tabindex="-1">
+
+    <section class="hero">
+      <h1>Hubungi Saya</h1>
+      <p class="muted">Ada pertanyaan, proyek, atau sekadar mau ngobrol soal keuangan? Gua terbuka.</p>
+    </section>
+
+    <div class="contact-layout">
+
+      <!-- Info kontak -->
+      <section class="contact-info">
+        <h3 class="about-section-title">Info Kontak</h3>
+
+        <div class="contact-item">
+          <span class="contact-label">Email</span>
+          <!-- GANTI: isi dengan email lo -->
+          <a href="mailto:work.wafaabbas@gmail.com" class="contact-value">work.wafaabbas@gmail.com</a>
+        </div>
+
+        <div class="contact-item">
+          <span class="contact-label">WhatsApp</span>
+          <!-- GANTI: isi nomor WA lo (format internasional tanpa +) -->
+          <a href="https://wa.me/6285113693713" class="contact-value" target="_blank" rel="noopener">
+            0851 1369 3713
+          </a>
+        </div>
+
+        <div class="contact-item">
+          <span class="contact-label">LinkedIn</span>
+          <!-- GANTI: isi username LinkedIn lo -->
+          <a href="https://linkedin.com/in/wafaabbs" class="contact-value" target="_blank" rel="noopener">
+            Wafa Abbas
+          </a>
+        </div>
+
+        <div class="contact-item">
+          <span class="contact-label">Instagram</span>
+          <!-- GANTI: isi username Instagram lo -->
+          <a href="https://instagram.com/wafaabbs" class="contact-value" target="_blank" rel="noopener">
+            @wafaabbs
+          </a>
+        </div>
+
+        <!-- Tambah item kontak lain di sini kalau perlu -->
+
+        <div class="contact-note">
+          <p class="muted">
+            Gua biasanya balas dalam 1-2 hari kerja. Untuk pertanyaan cepat,
+            WA lebih responsif dibanding email.
+          </p>
+        </div>
+      </section>
+
+      <!-- Form kontak -->
+      <section class="contact-form-section">
+        <h3 class="about-section-title">Kirim Pesan</h3>
+
+        <form id="contactFormWrapper">
+          <div class="contact-field">
+            <label for="contactName">Nama</label>
+            <input
+              type="text"
+              id="contactName"
+              name="name"
+              placeholder="Nama lo"
+              autocomplete="name"
+              maxlength="100"
+              required
+            />
+          </div>
+
+          <div class="contact-field">
+            <label for="contactEmail">Email</label>
+            <input
+              type="email"
+              id="contactEmail"
+              name="email"
+              placeholder="email@lo.com"
+              autocomplete="email"
+              maxlength="254"
+              required
+            />
+          </div>
+
+          <div class="contact-field">
+            <label for="contactSubject">Topik</label>
+            <select id="contactSubject" name="subject">
+              <option value="">— Pilih topik —</option>
+              <option value="Konsultasi Pajak">Konsultasi Pajak</option>
+              <option value="Pembukuan / Laporan Keuangan">Pembukuan / Laporan Keuangan</option>
+              <option value="Pelatihan / Workshop">Pelatihan / Workshop</option>
+              <option value="Kolaborasi Konten">Kolaborasi Konten</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+
+          <div class="contact-field">
+            <label for="contactMessage">Pesan</label>
+            <textarea
+              id="contactMessage"
+              name="message"
+              rows="5"
+              maxlength="5000"
+              placeholder="Ceritakan kebutuhan lo..."
+              required
+            ></textarea>
+          </div>
+
+          <p class="contact-form-message" id="contactMessage2" role="status" aria-live="polite"></p>
+
+          <button type="submit" class="contact-submit-button" id="contactSubmitButton">
+            Kirim Pesan
+          </button>
+        </form>
+      </section>
+
+    </div>
+
+  </main>
+
+<div id="site-footer-mount"></div>
+  <script src="components/header.js"></script>
+  <script src="components/font-size-toggle.js"></script>
+  <script src="components/translate.js"></script>
+
+  <script>
+    (function initContactForm() {
+      "use strict";
+
+
+      const nameInput    = document.getElementById("contactName");
+      const emailInput   = document.getElementById("contactEmail");
+      const subjectInput = document.getElementById("contactSubject");
+      const msgInput     = document.getElementById("contactMessage");
+      const msgEl        = document.getElementById("contactMessage2");
+      const formWrapper  = document.getElementById("contactFormWrapper");
+
+      function setFormMessage(text, type = "neutral") {
+        msgEl.textContent = text;
+        msgEl.dataset.type = type;
+      }
+
+      function validateForm() {
+        if (!nameInput.value.trim()) {
+          setFormMessage("Nama wajib diisi.", "error");
+          nameInput.focus();
+          return false;
+        }
+
+        if (!emailInput.value.trim() || !emailInput.value.includes("@")) {
+          setFormMessage("Email tidak valid.", "error");
+          emailInput.focus();
+          return false;
+        }
+
+        if (!msgInput.value.trim()) {
+          setFormMessage("Pesan wajib diisi.", "error");
+          msgInput.focus();
+          return false;
+        }
+
+        return true;
+      }
+
+      formWrapper.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!formWrapper.reportValidity() || !validateForm()) return;
+        const subject = subjectInput.value || "Pesan dari wafaabbas.com";
+        const body = `Nama: ${nameInput.value.trim()}\nEmail: ${emailInput.value.trim()}\n\n${msgInput.value.trim()}`;
+        setFormMessage("Aplikasi email akan dibuka untuk mengirim pesan ini.", "success");
+        window.location.href =
+          `mailto:work.wafaabbas@gmail.com?subject=${encodeURIComponent(subject)}` +
+          `&body=${encodeURIComponent(body)}`;
+      });
+
+    })();
+  </script>
+</body>
+</html>

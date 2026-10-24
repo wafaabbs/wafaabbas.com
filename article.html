@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artikel | wafaabbas.com</title>
+  <meta name="description" content="Daftar artikel akuntansi, perpajakan, dan keuangan di wafaabbas.com.">
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="wafaabbas.com" />
+  <meta property="og:locale" content="id_ID" />
+  <meta property="og:title" content="Artikel | wafaabbas.com" />
+  <meta property="og:description" content="Daftar artikel akuntansi, perpajakan, dan keuangan di wafaabbas.com." />
+  <!-- Membuka koneksi lebih awal ke host yang pasti dipakai halaman ini. -->
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://sjgsrposlucbkabxaodm.supabase.co" crossorigin />
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+<div id="site-header-mount"></div>
+
+  <main class="container" id="main-content" tabindex="-1">
+    <section class="hero">
+      <h1>Semua artikel</h1>
+      <p class="muted">
+        Kumpulan tulisan tentang akuntansi, perpajakan, dan keuangan praktis.
+        Klik judul untuk membaca detail artikel.
+      </p>
+    </section>
+
+    <section class="articles" aria-labelledby="articles-heading" style="margin-top:20px;">
+      <div class="section-header">
+        <h2 id="articles-heading">Daftar artikel</h2>
+      </div>
+
+      <div id="article-list" class="article-list">
+        <p class="muted" id="article-empty-state">
+          Belum ada artikel yang dipublikasikan.
+        </p>
+      </div>
+    </section>
+
+    <section class="article-detail" id="article-detail" hidden>
+      <hr style="margin:24px 0;" />
+      <article>
+        <img id="detail-thumbnail" class="detail-thumbnail" alt="" hidden />
+        <h2 id="detail-title"></h2>
+        <p class="muted" id="detail-meta" style="margin-bottom:10px;"></p>
+        <div id="detail-content"></div>
+      </article>
+    </section>
+  </main>
+
+<div id="site-footer-mount"></div>
+
+  <script src="components/header.js"></script>
+  <script src="components/font-size-toggle.js"></script>
+  <script src="components/translate.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="services/supabase.js"></script>
+  <script src="assets/js/articles.js"></script>
+</body>
+</html>

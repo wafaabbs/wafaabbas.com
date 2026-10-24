@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <title>Editor | Wafa Abbas CMS</title>
+
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <span class="admin-brand-mark">W</span>
+        <div>
+          <strong>Wafa Abbas</strong>
+          <small>Content Studio</small>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+  <a href="./dashboard.html">Dashboard</a>
+  <a href="./posts.html">Posts</a>
+  <a href="./categories.html">Kategori</a>
+  <a href="../index.html">View Site</a>
+  <button type="button" id="logoutButton" data-logout>Logout</button>
+</nav>
+
+      <button type="button" class="admin-ghost-button" id="logoutButtonSidebar" data-logout>
+        Logout
+      </button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <p class="admin-kicker">CMS Editor</p>
+          <h1 id="editorPageTitle">New Post</h1>
+        </div>
+
+        <div class="admin-topbar-actions">
+          <a href="./posts.html" class="admin-secondary-link">Back to Posts</a>
+          <button type="button" class="admin-secondary-button" id="saveDraftButton">
+            Save Draft
+          </button>
+          <button type="button" class="admin-primary-button" id="publishButton">
+            Publish
+          </button>
+        </div>
+      </header>
+
+      <form class="admin-editor-layout" id="editorForm">
+        <section class="admin-editor-main">
+          <label class="admin-field admin-title-field">
+            <span>Title</span>
+            <input
+              type="text"
+              id="postTitleInput"
+              placeholder="Judul artikel"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span>Excerpt</span>
+            <textarea
+              id="postExcerptInput"
+              rows="3"
+              placeholder="Ringkasan singkat artikel"
+            ></textarea>
+          </label>
+
+          <label class="admin-field">
+            <span>Content</span>
+            <textarea
+              id="postContentInput"
+              rows="18"
+              placeholder="Tulis isi artikel di sini..."
+              required
+            ></textarea>
+          </label>
+        </section>
+
+        <aside class="admin-editor-sidebar">
+          <section class="admin-panel admin-editor-panel">
+            <div class="admin-panel-header">
+              <div>
+                <h2>Settings</h2>
+                <p>Metadata dan status artikel.</p>
+              </div>
+            </div>
+
+            <div class="admin-editor-settings">
+              <input type="hidden" id="postIdInput" />
+
+              <label class="admin-field">
+                <span>Slug</span>
+                <input
+                  type="text"
+                  id="postSlugInput"
+                  placeholder="judul-artikel"
+                  required
+                />
+              </label>
+
+              <label class="admin-field">
+                <span>Category</span>
+                <select id="postCategoryInput">
+                  <option value="">Memuat kategori...</option>
+                </select>
+              </label>
+
+              <label class="admin-field">
+                <span>Status</span>
+                <select id="postStatusInput">
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </label>
+
+              <div class="admin-field admin-thumbnail-field">
+                <span>Thumbnail</span>
+
+                <img
+                  id="postThumbnailPreview"
+                  class="admin-thumbnail-preview"
+                  alt="Preview thumbnail"
+                  hidden
+                />
+
+                <input
+                  type="file"
+                  id="postThumbnailFileInput"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                />
+
+                <button
+                  type="button"
+                  class="admin-ghost-button admin-thumbnail-remove"
+                  id="removeThumbnailButton"
+                  hidden
+                >
+                  Hapus Thumbnail
+                </button>
+
+                <p class="admin-field-hint">
+                  JPG, PNG, WEBP, atau GIF. Maksimal 5MB.
+                </p>
+
+                <!-- Menyimpan thumbnail_url final yang akan dikirim ke Supabase -->
+                <input type="hidden" id="postThumbnailInput" />
+              </div>
+
+              <p class="admin-form-message" id="editorMessage"></p>
+
+              <button type="button" class="admin-danger-button" id="deletePostButton" hidden>
+                Delete Post
+              </button>
+            </div>
+          </section>
+        </aside>
+      </form>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="../services/supabase.js"></script>
+  <script src="../assets/js/admin-editor.js"></script>
+</body>
+</html>

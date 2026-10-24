@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Login | Wafa Abbas CMS</title>
+
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <main class="admin-login-page">
+    <section class="admin-login-panel">
+      <div class="admin-brand admin-login-brand">
+        <span class="admin-brand-mark">W</span>
+        <div>
+          <strong>Wafa Abbas</strong>
+          <small>Content Studio</small>
+        </div>
+      </div>
+
+      <div class="admin-login-heading">
+        <p class="admin-kicker">Admin CMS</p>
+        <h1>Login</h1>
+        <p>Masuk untuk mengelola artikel, draft, dan publikasi website.</p>
+      </div>
+
+      <form class="admin-login-form" id="loginForm">
+        <label class="admin-field">
+          <span>Email</span>
+          <input
+            type="email"
+            id="emailInput"
+            autocomplete="email"
+            required
+          />
+        </label>
+
+        <label class="admin-field">
+          <span>Password</span>
+          <input
+            type="password"
+            id="passwordInput"
+            autocomplete="current-password"
+            required
+          />
+        </label>
+
+        <p class="admin-form-message" id="loginMessage"></p>
+
+        <button type="submit" class="admin-primary-button admin-login-button" id="loginButton">
+          Login
+        </button>
+      </form>
+
+      <a href="../index.html" class="admin-login-link">Back to website</a>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
+  <script src="../services/supabase.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+</body>
+</html>

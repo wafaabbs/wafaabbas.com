@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <title>Dashboard | Wafa Abbas CMS</title>
+
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p>Ringkasan CMS wafaabbas.com.</p>
+    </div>
+
+    <nav class="admin-nav">
+  <a href="./dashboard.html">Dashboard</a>
+  <a href="./posts.html">Posts</a>
+  <a href="./categories.html">Kategori</a>
+  <a href="../index.html">View Site</a>
+  <button type="button" id="logoutButton">Logout</button>
+</nav>
+  </header>
+
+  <main class="admin-container">
+    <section class="admin-actions">
+      <div>
+        <h2>Overview</h2>
+        <p id="dashboardMessage">Memuat dashboard...</p>
+      </div>
+
+      <a href="./editor.html" class="admin-button-primary">New Post</a>
+    </section>
+
+    <section class="admin-card">
+      <table class="admin-table">
+        <tbody>
+          <tr>
+            <th>Total Artikel</th>
+            <td id="totalPostsCount">0</td>
+          </tr>
+          <tr>
+            <th>Published</th>
+            <td id="publishedPostsCount">0</td>
+          </tr>
+          <tr>
+            <th>Draft</th>
+            <td id="draftPostsCount">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+  <script src="../services/supabase.js"></script>
+  <script>
+    (async function initDashboard() {
+      const { auth, articles } = window.WafaSupabase;
+
+      const logoutButton = document.getElementById("logoutButton");
+      const dashboardMessage = document.getElementById("dashboardMessage");
+      const totalPostsCount = document.getElementById("totalPostsCount");
+      const publishedPostsCount = document.getElementById("publishedPostsCount");
+      const draftPostsCount = document.getElementById("draftPostsCount");
+
+      // Alur logout yang sama untuk semua halaman admin (lihat auth.logout).
+      logoutButton.addEventListener("click", function () {
+        return auth.logout("./login.html");
+      });
+
+      try {
+        // requireSession mengembalikan null (dan mengarahkan ke login) bila
+        // tidak ada sesi admin; jangan lanjut memuat data.
+        const session = await auth.requireSession("./login.html");
+        if (!session) {
+          return;
+        }
+
+        const posts = await articles.listAdmin();
+        const published = posts.filter((post) => post.status === "published");
+        const draft = posts.filter((post) => post.status === "draft");
+
+        totalPostsCount.textContent = posts.length;
+        publishedPostsCount.textContent = published.length;
+        draftPostsCount.textContent = draft.length;
+
+        dashboardMessage.textContent = "Dashboard siap digunakan.";
+      } catch (error) {
+        dashboardMessage.textContent =
+          error.message || "Gagal memuat dashboard.";
+      }
+    })();
+  </script>
+</body>
+</html>
