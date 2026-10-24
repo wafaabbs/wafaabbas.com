@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id" data-font-size="md">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // GitHub Pages menyajikan 404.html pada URL apa pun. <base> memastikan aset dan modul termuat dari akar situs,
+    // termasuk bila dipasang di sub-folder proyek (mis. /nama-repo/ pada *.github.io).
+    (function () {
+      var seg = location.pathname.split("/");
+      var root = location.hostname.slice(-10) === ".github.io" && seg[1] ? "/" + seg[1] + "/" : "/";
+      document.write('<base href="' + root + '">');
+    })();
+  </script>
+  <title>Halaman tidak ditemukan | wafaabbas.com</title>
+  <meta name="description" content="Halaman yang Anda cari tidak ditemukan." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0a202e" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="wafaabbas.com" />
+  <meta property="og:locale" content="id_ID" />
+  <meta property="og:title" content="Halaman tidak ditemukan | wafaabbas.com" />
+  <meta property="og:description" content="Halaman yang Anda cari tidak ditemukan." />
+  <link rel="icon" href="assets/images/logo/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/images/logo/favicon.ico" sizes="48x48" />
+  <link rel="apple-touch-icon" href="assets/images/logo/apple-touch-icon.png" />
+  <link rel="preload" href="assets/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preconnect" href="https://sjgsrposlucbkabxaodm.supabase.co" crossorigin />
+  <link rel="stylesheet" href="assets/css/tokens.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <link rel="stylesheet" href="assets/css/pages.css" />
+</head>
+<body>
+<a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+<header id="site-header"></header>
+<main id="main-content" tabindex="-1">
+  <div class="notfound">
+    <div>
+      <div class="notfound__code" aria-hidden="true">4<span>0</span>4</div>
+      <h1>Halaman tidak ditemukan</h1>
+      <p>Alamat yang Anda buka tidak ada atau sudah dipindahkan.</p>
+      <a class="btn btn--primary" id="home-link" href="./">Kembali ke beranda</a>
+    </div>
+  </div>
+</main>
+<footer id="site-footer"></footer>
+<script src="https://unpkg.com/@supabase/supabase-js@2.117.2"></script>
+<script type="module" src="pages/static.js"></script>
+</body>
+</html>

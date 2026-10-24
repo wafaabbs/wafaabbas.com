@@ -1,0 +1,151 @@
+/* =====================================================================
+   DESIGN TOKENS — satu-satunya tempat nilai desain didefinisikan.
+   Palet & tipografi diturunkan dari analisis mojok.co.har (referensi), disesuaikan agar
+   rasio kontras teks memenuhi WCAG AA. Identitas logo Wafa Abbas tidak diubah.
+     navy gelap   #0a202e / #0d2a3d  (header, footer, panel)  — dari HAR
+     aksen limau  #81d742            (aksen, hover, garis)     — dari HAR
+     font         Plus Jakarta Sans (UI)  +  Newsreader (bacaan panjang)  — keduanya SIL OFL
+   ===================================================================== */
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Newsreader";
+  src: url("../fonts/newsreader-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---- warna: ink (navy) ---- */
+  --ink-950: #061520;
+  --ink-900: #0a202e;
+  --ink-800: #0d2a3d;
+  --ink-700: #153a52;
+  --ink-600: #1f4d6b;
+  --ink-500: #3b6b88;
+  --ink-300: #a0aec0;
+  --ink-200: #cbd5e0;
+  --ink-100: #e2e8f0;
+
+  /* ---- warna: aksen ---- */
+  --accent-300: #b6ea8a;
+  --accent-400: #9be15f;
+  --accent-500: #81d742;
+  --accent-600: #5fae28;
+  --accent-700: #3f7f12;    /* teks/tautan aksen di atas latar terang (kontras 5.3:1 pada putih) */
+  --accent-100: #eaf7dc;
+
+  /* ---- warna: permukaan & teks (terang) ---- */
+  --paper: #f5f7f4;
+  --surface: #ffffff;
+  --surface-sunken: #eef1ed;
+  --line: #dde3dd;
+  --line-strong: #c4ccc4;
+  --text: #0e1f2a;
+  --text-soft: #34495a;
+  --text-muted: #5b6d79;    /* kontras 5.6:1 pada putih */
+  --link: #1f4d6b;
+  --link-hover: #0a202e;
+
+  /* ---- warna: status ---- */
+  --danger-500: #b42318;
+  --danger-100: #fde8e6;
+  --success-500: #1a7f37;
+  --success-100: #e3f5e8;
+  --warning-500: #8a5a00;
+  --warning-100: #fff3d6;
+  --info-100: #e6f0f7;
+
+  /* ---- tipografi ---- */
+  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-read: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: clamp(0.72rem, 0.7rem + 0.1vw, 0.78rem);
+  --text-sm: clamp(0.82rem, 0.8rem + 0.15vw, 0.9rem);
+  --text-md: clamp(0.95rem, 0.92rem + 0.2vw, 1.03rem);
+  --text-lg: clamp(1.08rem, 1.02rem + 0.35vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.7vw, 1.6rem);
+  --text-2xl: clamp(1.5rem, 1.2rem + 1.3vw, 2.2rem);
+  --text-3xl: clamp(1.85rem, 1.35rem + 2.2vw, 3rem);
+  --text-4xl: clamp(2.2rem, 1.4rem + 3.4vw, 3.8rem);
+  --reading-size: clamp(1.1rem, 1.04rem + 0.35vw, 1.3rem);
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+  --leading-read: 1.78;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  /* ---- spasi (skala 4px) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+
+  /* ---- bentuk ---- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(10 32 46 / 0.06), 0 1px 3px rgb(10 32 46 / 0.08);
+  --shadow-md: 0 6px 16px rgb(10 32 46 / 0.1), 0 2px 4px rgb(10 32 46 / 0.06);
+  --shadow-lg: 0 18px 40px rgb(10 32 46 / 0.18);
+  --shadow-nav: 0 10px 30px rgb(0 0 0 / 0.35);
+
+  /* ---- layout ---- */
+  --container: 1120px;
+  --container-narrow: 760px;
+  --read-width: 40rem;
+  --gutter: clamp(1rem, 4vw, 1.5rem);
+  --header-h: 56px;
+
+  /* ---- gerak ---- */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+
+  /* ---- lapisan ---- */
+  --z-sticky: 50;
+  --z-dropdown: 60;
+  --z-overlay: 90;
+  --z-drawer: 100;
+  --z-toast: 120;
+
+  --focus-ring: 0 0 0 3px var(--accent-500);
+
+  /* ---- breakpoint (referensi dokumentasi; media query tidak bisa memakai var) ----
+     sm 560px | md 768px | nav 960px | lg 1120px */
+}
+
+/* Ukuran teks yang dapat diatur pembaca (komponen font-size) */
+html[data-font-size="sm"] { font-size: 93.75%; }
+html[data-font-size="md"] { font-size: 100%; }
+html[data-font-size="lg"] { font-size: 112.5%; }
+html[data-font-size="xl"] { font-size: 125%; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur: 0ms; }
+}

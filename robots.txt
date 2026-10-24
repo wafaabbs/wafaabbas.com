@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin/
+
+# Tambahkan baris "Sitemap: https://DOMAIN/sitemap.xml" setelah domain produksi dikonfirmasi
+# dan sitemap dibuat dengan: SITE_URL=https://DOMAIN node scripts/generate-sitemap.mjs

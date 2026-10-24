@@ -1,0 +1,14 @@
+{
+  "name": "wafaabbas-web",
+  "private": true,
+  "type": "module",
+  "description": "Situs wafaabbas.com (HTML/CSS/JS statis + Supabase). Paket ini hanya untuk menjalankan tes; situs sendiri tanpa build step.",
+  "scripts": {
+    "test": "node tests/unit/core.test.mjs && node tests/hygiene.test.mjs && node tests/e2e/public.test.mjs && node tests/e2e/admin.test.mjs",
+    "test:sql": "node tests/sql/db.test.mjs",
+    "test:unit": "node tests/unit/core.test.mjs",
+    "test:e2e": "node tests/e2e/public.test.mjs && node tests/e2e/admin.test.mjs",
+    "sitemap": "node scripts/generate-sitemap.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

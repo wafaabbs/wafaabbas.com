@@ -1,0 +1,289 @@
+// Uji migrasi SQL + RLS pada Postgres NYATA (PGlite = Postgres WASM), bukan mock.
+// Meniru lingkungan Supabase: role anon/authenticated, auth.jwt() dari request.jwt.claims,
+// storage.objects, dan kondisi RENTAN yang dilaporkan audit (policy `true`, ACL luas).
+//
+// Menjalankan:   npm install --no-save @electric-sql/pglite
+//                node tests/sql/db.test.mjs
+// (atau set PGLITE_DIR ke folder node_modules/@electric-sql/pglite yang sudah ada)
+//
+// Ini TIDAK menyentuh Supabase produksi. Semua data hanya ada di memori.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, "..", "..");
+const MIG = (f) => readFileSync(path.join(ROOT, "supabase", "migrations", f), "utf8");
+
+async function loadPglite() {
+  try { return (await import("@electric-sql/pglite")).PGlite; } catch (_) {}
+  const dir = process.env.PGLITE_DIR;
+  if (!dir) throw new Error("PGlite tidak ditemukan. Jalankan: npm install --no-save @electric-sql/pglite  (atau set PGLITE_DIR)");
+  return (await import(pathToFileURL(path.join(dir, "dist", "index.js")).href)).PGlite;
+}
+
+let pass = 0, fail = 0;
+const failures = [];
+function check(name, ok, detail = "") {
+  if (ok) { pass++; } else { fail++; failures.push(`${name} ${detail}`); }
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${!ok && detail ? "  -> " + detail : ""}`);
+}
+
+// ---------------------------------------------------------------------
+// Lingkungan tiruan Supabase + kondisi RENTAN (sebelum migrasi)
+// ---------------------------------------------------------------------
+function baseline(idType) {
+  const pk = idType === "uuid" ? "uuid primary key default gen_random_uuid()" : "bigint generated always as identity primary key";
+  const ref = idType === "uuid" ? "uuid" : "bigint";
+  return `
+  create role anon nologin; create role authenticated nologin; create role service_role nologin;
+  grant usage on schema public to anon, authenticated;
+
+  create schema auth;
+  create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_app_meta_data jsonb not null default '{}',
+    raw_user_meta_data jsonb not null default '{}', email_confirmed_at timestamptz, last_sign_in_at timestamptz, created_at timestamptz default now());
+  create function auth.jwt() returns jsonb language sql stable as
+    $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
+  grant usage on schema auth to anon, authenticated;
+  grant execute on function auth.jwt() to anon, authenticated;
+
+  create schema storage;
+  create table storage.buckets (id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text, owner uuid);
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to anon, authenticated;
+  grant all on storage.objects to anon, authenticated;
+
+  create table public.categories (id ${pk}, name text not null, slug text not null unique,
+    parent_id ${ref} references public.categories(id) on delete set null, created_at timestamptz default now());
+  create table public.articles (id ${pk}, title text not null, slug text not null unique, excerpt text, content text,
+    category_id ${ref} references public.categories(id) on delete set null, status text not null default 'draft',
+    published_at timestamptz, created_at timestamptz default now(), updated_at timestamptz default now(), thumbnail_url text);
+  create table public.menus (id ${pk}, label text not null, url text not null, order_index int not null default 0,
+    parent_id ${ref} references public.menus(id) on delete cascade, icon_name text, description text, created_at timestamptz default now());
+  create table public.featured_posts (id ${pk}, position int unique, article_id ${ref} references public.articles(id) on delete cascade);
+  create table public.banners (id ${pk}, title text, image_url text not null, link_url text, order_index int default 0,
+    is_active boolean not null default true, created_at timestamptz default now());
+
+  -- ACL luas seperti hasil audit (anon & authenticated: SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER)
+  grant all on all tables in schema public to anon, authenticated;
+  grant all on all sequences in schema public to anon, authenticated;
+
+  -- RLS aktif tetapi policy tulis authenticated = true (kondisi rentan dari audit)
+  do $$ declare t text; begin
+    foreach t in array array['articles','categories','menus','featured_posts','banners'] loop
+      execute format('alter table public.%I enable row level security', t);
+      execute format('create policy "auth write %s" on public.%I for all to authenticated using (true) with check (true)', t, t);
+    end loop; end $$;
+  create policy "public read published" on public.articles for select to anon using (status = 'published');
+  create policy "public read categories" on public.categories for select to anon, authenticated using (true);
+  create policy "public read menus" on public.menus for select to anon, authenticated using (true);
+  create policy "public read featured" on public.featured_posts for select to anon, authenticated using (true);
+  create policy "public read banners" on public.banners for select to anon, authenticated using (is_active = true);
+
+  insert into storage.buckets values ('thumbnails','thumbnails',true,5242880, array['image/jpeg','image/png','image/webp']);
+  create policy "legacy thumbs select" on storage.objects for select to anon using (bucket_id = 'thumbnails');
+  create policy "legacy thumbs write"  on storage.objects for all to authenticated using (bucket_id = 'thumbnails') with check (bucket_id = 'thumbnails');
+  `;
+}
+
+const SEED = `
+  insert into auth.users (id, email, raw_app_meta_data) values
+    ('00000000-0000-0000-0000-0000000000a1', 'owner@example.test', '{"role":"admin"}'),
+    ('00000000-0000-0000-0000-0000000000b2', 'visitor@example.test', '{}');
+  insert into public.categories (name, slug) values ('Pajak','pajak'), ('Akuntansi','akuntansi');
+  insert into public.articles (title, slug, content, status, published_at) values
+    ('Terbit','terbit','isi','published', now()), ('Rahasia','rahasia','draft','draft', null);
+  insert into public.menus (label, url, order_index) values ('Beranda','index.html',0), ('Artikel','article.html',1);
+  insert into public.banners (title, image_url, is_active) values ('on','https://x.test/a.png',true), ('off','https://x.test/b.png',false);
+  insert into storage.objects (bucket_id, name) values ('thumbnails','a.png');
+`;
+
+const ADMIN = { sub: "00000000-0000-0000-0000-0000000000a1", role: "authenticated", app_metadata: { role: "admin" } };
+const USER = { sub: "00000000-0000-0000-0000-0000000000b2", role: "authenticated", app_metadata: {} };
+// klaim yang DIPALSUKAN lewat user_metadata (tidak boleh dianggap admin)
+const FAKE = { sub: "00000000-0000-0000-0000-0000000000b2", role: "authenticated", app_metadata: {}, user_metadata: { role: "admin" } };
+
+async function as(db, role, claims, sql, params) {
+  try {
+    let result;
+    await db.transaction(async (tx) => {
+      await tx.query(`set local role ${role}`);
+      await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify(claims || {})]);
+      result = await tx.query(sql, params);
+    });
+    return { rows: result.rows, rowCount: result.affectedRows ?? result.rows.length };
+  } catch (e) {
+    return { error: e.code || "ERR", message: e.message };
+  }
+}
+const count = async (db, role, claims, table, where = "true") =>
+  (await as(db, role, claims, `select count(*)::int as n from public.${table} where ${where}`)).rows?.[0]?.n;
+
+async function suite(PGlite, idType) {
+  console.log(`\n=========== id bertipe ${idType} ===========`);
+  const db = new PGlite();
+  await db.exec(baseline(idType));
+  await db.exec(SEED);
+
+  // ---- KONTROL: kondisi rentan memang ada sebelum migrasi (bukti uji ini mendeteksi masalah) ----
+  let r = await as(db, "authenticated", USER, `update public.articles set title = 'DIRETAS' where slug = 'terbit'`);
+  check(`[${idType}] KONTROL sebelum migrasi: non-admin bisa UPDATE artikel (celah audit)`, r.rowCount === 1);
+  r = await as(db, "authenticated", USER, `delete from public.banners where title = 'off'`);
+  check(`[${idType}] KONTROL sebelum migrasi: non-admin bisa DELETE banner`, r.rowCount === 1);
+  r = await as(db, "authenticated", USER, `insert into storage.objects (bucket_id, name) values ('thumbnails','hack.png')`);
+  check(`[${idType}] KONTROL sebelum migrasi: non-admin bisa upload ke Storage`, !r.error);
+  await db.exec(`update public.articles set title='Terbit' where slug='terbit'; insert into public.banners (title,image_url,is_active) values ('off','https://x.test/b.png',false); delete from storage.objects where name='hack.png';`);
+  const before = { articles: await count(db, "postgres", {}, "articles"), menus: await count(db, "postgres", {}, "menus") };
+
+  // ---- 001 ----
+  await db.exec(MIG("001_menus_hierarchy_and_pages.sql"));
+  await db.exec(MIG("001_menus_hierarchy_and_pages.sql"));            // idempoten
+  check(`[${idType}] 001 idempoten (dijalankan 2x tanpa error)`, true);
+  check(`[${idType}] 001 tidak menghapus data (artikel/menu tetap)`,
+    (await count(db, "postgres", {}, "articles")) === before.articles && (await count(db, "postgres", {}, "menus")) === before.menus);
+  r = await db.query(`select location, is_active from public.menus order by label`);
+  check(`[${idType}] 001 baris menu lama otomatis header + aktif`, r.rows.every((x) => x.location === "header" && x.is_active === true));
+
+  // trigger hierarki (sebagai superuser; trigger berlaku untuk semua)
+  const top = (await db.query(`insert into public.menus (label,url) values ('Induk','tentang.html') returning id`)).rows[0].id;
+  const kid = (await db.query(`insert into public.menus (label,url,parent_id) values ('Anak','about.html',$1) returning id`, [top])).rows[0].id;
+  const tryq = async (sql, p) => { try { await db.query(sql, p); return null; } catch (e) { return e; } };
+  let e = await tryq(`update public.menus set parent_id = id where id = $1`, [top]);
+  check(`[${idType}] menu tidak bisa menjadi parent dirinya sendiri`, e && e.code === "23514", e && e.message);
+  e = await tryq(`insert into public.menus (label,url,parent_id) values ('Cucu','a.html',$1)`, [kid]);
+  check(`[${idType}] kedalaman >2 tingkat ditolak`, e && e.code === "23514");
+  e = await tryq(`update public.menus set parent_id = $1 where id = $2`, [kid, top]);
+  check(`[${idType}] siklus parent<->anak ditolak`, e && e.code === "23514");
+  const other = (await db.query(`insert into public.menus (label,url) values ('Lain','kontak.html') returning id`)).rows[0].id;
+  e = await tryq(`update public.menus set parent_id = $1 where id = $2`, [other, top]);
+  check(`[${idType}] menu yang punya submenu tidak boleh dijadikan submenu`, e && e.code === "23514");
+  e = await tryq(`insert into public.menus (label,url,parent_id,location) values ('Foot','a.html',$1,'footer')`, [top]);
+  check(`[${idType}] submenu beda lokasi dari parent ditolak`, e && e.code === "23514");
+  e = await tryq(`update public.menus set location='footer' where id = $1`, [top]);
+  check(`[${idType}] mengganti lokasi menu yang punya submenu ditolak`, e && e.code === "23514");
+  e = await tryq(`update public.menus set parent_id = $1 where id = $2`, [other, kid]);
+  check(`[${idType}] memindahkan submenu ke parent lain diizinkan`, !e, e && e.message);
+  e = await tryq(`insert into public.menus (label,url,location) values ('x','a.html','sidebar')`);
+  check(`[${idType}] lokasi tidak valid ditolak`, e && e.code === "23514");
+  for (const bad of ["javascript:alert(1)", "data:text/html,x", "//evil.example", "http://x.test", "a.html\" onclick=\"x", "JAVASCRIPT:1", "\\\\evil"]) {
+    e = await tryq(`insert into public.menus (label,url) values ('x',$1)`, [bad]);
+    check(`[${idType}] URL menu berbahaya ditolak DB: ${JSON.stringify(bad)}`, e && e.code === "23514");
+  }
+  for (const good of ["tools.html", "page.html?slug=privasi", "/about.html", "#top", "https://example.com/p?x=1", "mailto:a@b.co", "category.html?slug=pajak-ppn"]) {
+    e = await tryq(`insert into public.menus (label,url) values ('ok',$1)`, [good]);
+    check(`[${idType}] URL menu sah diterima DB: ${good}`, !e, e && e.message);
+  }
+  e = await tryq(`insert into public.menus (label,url) values ('   ','a.html')`);
+  check(`[${idType}] label kosong ditolak`, e && e.code === "23514");
+  await db.exec(`delete from public.menus where label in ('ok','Lain','Anak','Induk')`);
+
+  // pages
+  e = await tryq(`insert into public.pages (title, slug) values ('x','Slug Salah')`);
+  check(`[${idType}] slug halaman tidak valid ditolak`, e && e.code === "23514");
+  await db.exec(`insert into public.pages (title, slug, content, status) values ('Privasi','kebijakan-privasi','isi','published'), ('Konsep','konsep','rahasia','draft')`);
+  e = await tryq(`insert into public.pages (title, slug) values ('dup','kebijakan-privasi')`);
+  check(`[${idType}] slug halaman unik`, e && e.code === "23505");
+  r = await db.query(`select published_at is not null as ok from public.pages where slug='kebijakan-privasi'`);
+  check(`[${idType}] published_at terisi otomatis saat terbit`, r.rows[0].ok === true);
+  r = await db.query(`select published_at from public.pages where slug='konsep'`);
+  check(`[${idType}] draft tidak punya published_at`, r.rows[0].published_at === null);
+
+  // ---- 002: pengaman (tanpa admin harus menolak) ----
+  const dbNoAdmin = new PGlite(); await dbNoAdmin.exec(baseline(idType)); await dbNoAdmin.exec(MIG("001_menus_hierarchy_and_pages.sql"));
+  e = await dbNoAdmin.exec(MIG("002_rls_admin_hardening.sql")).then(() => null, (x) => x);
+  check(`[${idType}] 002 menolak jalan bila belum ada akun admin (pengaman anti-terkunci)`, e && /Tidak ada akun/.test(e.message), e && e.message);
+  await dbNoAdmin.close();
+
+  // ---- 002 ----
+  await db.exec(MIG("002_rls_admin_hardening.sql"));
+  await db.exec(MIG("002_rls_admin_hardening.sql"));                  // idempoten
+  check(`[${idType}] 002 idempoten (dijalankan 2x)`, true);
+  const pols = (await db.query(`select tablename, policyname from pg_policies where schemaname='public'`)).rows;
+  check(`[${idType}] tidak ada policy lama tersisa (hanya *_public_read / *_admin_all)`, pols.every((p) => /_public_read$|_admin_all$/.test(p.policyname)), JSON.stringify(pols.filter((p) => !/_public_read$|_admin_all$/.test(p.policyname))));
+
+  // baca publik
+  check(`[${idType}] anon melihat HANYA artikel terbit`, (await count(db, "anon", {}, "articles")) === 1);
+  check(`[${idType}] anon TIDAK melihat draft artikel`, (await count(db, "anon", {}, "articles", "status <> 'published'")) === 0);
+  check(`[${idType}] anon melihat HANYA halaman terbit`, (await count(db, "anon", {}, "pages")) === 1 && (await count(db, "anon", {}, "pages", "status <> 'published'")) === 0);
+  check(`[${idType}] anon melihat banner aktif saja`, (await count(db, "anon", {}, "banners")) === 1);
+  await db.exec(`insert into public.menus (label,url,is_active) values ('Rahasia','x.html',false)`);
+  check(`[${idType}] anon TIDAK melihat menu nonaktif`, (await count(db, "anon", {}, "menus", "is_active is not true")) === 0);
+  check(`[${idType}] non-admin TIDAK melihat menu nonaktif / draft`,
+    (await count(db, "authenticated", USER, "menus", "is_active is not true")) === 0 &&
+    (await count(db, "authenticated", USER, "articles", "status <> 'published'")) === 0 &&
+    (await count(db, "authenticated", USER, "pages", "status <> 'published'")) === 0);
+  check(`[${idType}] kategori terbaca publik`, (await count(db, "anon", {}, "categories")) === 2);
+
+  // tulis anon
+  for (const t of ["articles", "categories", "menus", "featured_posts", "banners", "pages"]) {
+    const ins = { articles: `insert into public.articles (title,slug) values ('x','x1')`, categories: `insert into public.categories (name,slug) values ('x','x1')`,
+      menus: `insert into public.menus (label,url) values ('x','a.html')`, featured_posts: `insert into public.featured_posts (position) values (9)`,
+      banners: `insert into public.banners (title,image_url) values ('x','https://x.test/z.png')`, pages: `insert into public.pages (title,slug) values ('x','x1')` }[t];
+    r = await as(db, "anon", {}, ins);
+    check(`[${idType}] anon INSERT ke ${t} ditolak`, r.error === "42501", JSON.stringify(r).slice(0, 120));
+    r = await as(db, "anon", {}, `update public.${t} set id = id`);
+    check(`[${idType}] anon UPDATE ${t} ditolak`, !!r.error || r.rowCount === 0);
+    r = await as(db, "anon", {}, `delete from public.${t}`);
+    check(`[${idType}] anon DELETE ${t} ditolak`, !!r.error || r.rowCount === 0);
+    r = await as(db, "anon", {}, `truncate public.${t}`);
+    check(`[${idType}] anon TRUNCATE ${t} ditolak`, r.error === "42501");
+    r = await as(db, "authenticated", USER, `truncate public.${t}`);
+    check(`[${idType}] authenticated TRUNCATE ${t} ditolak`, r.error === "42501");
+    r = await as(db, "authenticated", ADMIN, `truncate public.${t}`);
+    check(`[${idType}] bahkan admin tidak punya TRUNCATE di ${t}`, r.error === "42501");
+
+    // non-admin
+    r = await as(db, "authenticated", USER, ins);
+    check(`[${idType}] non-admin INSERT ke ${t} ditolak (RLS)`, r.error === "42501", JSON.stringify(r).slice(0, 120));
+    r = await as(db, "authenticated", USER, `update public.${t} set id = id`);
+    check(`[${idType}] non-admin UPDATE ${t} mengenai 0 baris`, !!r.error || r.rowCount === 0);
+    r = await as(db, "authenticated", USER, `delete from public.${t}`);
+    check(`[${idType}] non-admin DELETE ${t} mengenai 0 baris`, !!r.error || r.rowCount === 0);
+    // klaim palsu via user_metadata
+    r = await as(db, "authenticated", FAKE, ins);
+    check(`[${idType}] user_metadata.role='admin' TIDAK memberi hak admin di ${t}`, r.error === "42501");
+  }
+
+  // admin
+  r = await as(db, "authenticated", ADMIN, `insert into public.articles (title,slug,status) values ('Baru','baru','draft') returning slug`);
+  check(`[${idType}] admin INSERT artikel`, r.rows?.[0]?.slug === "baru", JSON.stringify(r));
+  check(`[${idType}] admin melihat semua artikel (termasuk draft)`, (await count(db, "authenticated", ADMIN, "articles")) === 3);
+  check(`[${idType}] admin melihat menu nonaktif & halaman draft`, (await count(db, "authenticated", ADMIN, "menus", "is_active is not true")) === 1 && (await count(db, "authenticated", ADMIN, "pages", "status <> 'published'")) === 1);
+  r = await as(db, "authenticated", ADMIN, `update public.articles set title='Diubah' where slug='baru' returning title`);
+  check(`[${idType}] admin UPDATE ... RETURNING artikel`, r.rows?.[0]?.title === "Diubah");
+  r = await as(db, "authenticated", ADMIN, `delete from public.articles where slug='baru' returning id`);
+  check(`[${idType}] admin DELETE ... RETURNING (unwrapDelete bekerja)`, r.rows?.length === 1);
+  r = await as(db, "authenticated", ADMIN, `insert into public.pages (title,slug,status,content) values ('Halaman','halaman','published','# Hai') returning published_at`);
+  check(`[${idType}] admin buat halaman terbit (published_at otomatis)`, r.rows?.[0]?.published_at != null, JSON.stringify(r));
+  r = await as(db, "authenticated", ADMIN, `insert into public.menus (label,url,location) values ('Footer A','page.html?slug=halaman','footer') returning location`);
+  check(`[${idType}] admin buat menu footer`, r.rows?.[0]?.location === "footer", JSON.stringify(r));
+  r = await as(db, "authenticated", ADMIN, `insert into public.menus (label,url) values ('Bahaya','javascript:alert(1)')`);
+  check(`[${idType}] bahkan admin tidak bisa menyimpan URL menu berbahaya (CHECK DB)`, r.error === "23514");
+
+  // Storage
+  r = await as(db, "authenticated", USER, `insert into storage.objects (bucket_id, name) values ('thumbnails','hack.png')`);
+  check(`[${idType}] non-admin upload ke Storage ditolak`, r.error === "42501");
+  r = await as(db, "authenticated", ADMIN, `insert into storage.objects (bucket_id, name) values ('thumbnails','ok.png') returning name`);
+  check(`[${idType}] admin upload ke Storage diizinkan`, r.rows?.[0]?.name === "ok.png", JSON.stringify(r));
+  r = await as(db, "authenticated", USER, `delete from storage.objects where bucket_id='thumbnails'`);
+  check(`[${idType}] non-admin DELETE Storage mengenai 0 objek`, !!r.error || r.rowCount === 0);
+  r = await as(db, "authenticated", USER, `update storage.objects set name='x' where bucket_id='thumbnails'`);
+  check(`[${idType}] non-admin UPDATE Storage mengenai 0 objek`, !!r.error || r.rowCount === 0);
+  check(`[${idType}] anon TIDAK bisa mendaftar isi bucket (listing ditutup)`, (await as(db, "anon", {}, `select count(*)::int as n from storage.objects`)).rows?.[0]?.n === 0);
+  check(`[${idType}] non-admin TIDAK bisa mendaftar isi bucket`, (await as(db, "authenticated", USER, `select count(*)::int as n from storage.objects`)).rows?.[0]?.n === 0);
+  check(`[${idType}] admin bisa mendaftar isi bucket (dibutuhkan remove())`, ((await as(db, "authenticated", ADMIN, `select count(*)::int as n from storage.objects`)).rows?.[0]?.n ?? 0) >= 1);
+
+  // fungsi
+  r = await as(db, "anon", {}, `select public.wafa_is_admin() as a`);
+  check(`[${idType}] wafa_is_admin() false untuk anon`, r.rows?.[0]?.a === false);
+  r = await as(db, "authenticated", {}, `select public.wafa_is_admin() as a`);
+  check(`[${idType}] wafa_is_admin() false tanpa klaim`, r.rows?.[0]?.a === false);
+  await db.close();
+}
+
+const PGlite = await loadPglite();
+await suite(PGlite, "bigint");
+await suite(PGlite, "uuid");
+console.log(`\nRINGKASAN: ${pass} PASS, ${fail} FAIL`);
+if (fail) { console.log("Gagal:\n - " + failures.join("\n - ")); process.exit(1); }
