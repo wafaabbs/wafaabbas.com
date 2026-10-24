@@ -37,4 +37,3 @@ export function icon(name, { size = 20, label } = {}) {
   );
 }
 
-export const hasIcon = (name) => Object.hasOwn(PATHS, name);

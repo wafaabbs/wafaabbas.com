@@ -15,7 +15,7 @@ index.html article.html category.html page.html about.html contact.html tools.ht
 admin/                 login, dashboard, posts, editor, categories, menus, pages, home  (semua noindex)
 assets/css/            tokens → base → layout → components → pages   (+ admin.css untuk panel)
 assets/fonts/          Plus Jakarta Sans & Newsreader (OFL, self-hosted)
-assets/images/logo/    logo, favicon, apple-touch-icon, og-image
+assets/images/        logo (SVG), favicon, apple-touch-icon, og-image, placeholder thumbnail
 core/                  config, dom (html`` auto-escape), url (allowlist tautan), format, markdown (aman), seo
 services/              akses Supabase per domain: client, auth, articles, categories, menus, pages, featured, banners, storage
 components/            header, footer, kartu artikel, pagination, breadcrumb, pencarian, TOC, editor markdown, ikon, state

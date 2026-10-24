@@ -31,6 +31,5 @@ export function readingMinutes(text) {
   return Math.max(1, Math.round(words / 200));
 }
 
-export function pluralize(n, one, many = one) { return n === 1 ? one : many; }
 
 export function pageCount(total, pageSize) { return Math.max(1, Math.ceil((Number(total) || 0) / pageSize)); }

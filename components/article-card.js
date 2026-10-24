@@ -5,7 +5,7 @@ import { articleHref, categoryHref, pathTo, safeImageUrl, slugOk } from "../core
 import { formatDateShort, isoDate, truncate } from "../core/format.js";
 import { markdownToText } from "../core/markdown.js";
 
-export const PLACEHOLDER_IMAGE = () => pathTo("assets/img/thumbnail-placeholder.png");
+export const PLACEHOLDER_IMAGE = () => pathTo("assets/images/thumbnail-placeholder.png");
 
 /**
  * @param {object} a artikel (kolom daftar)

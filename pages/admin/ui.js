@@ -1,6 +1,6 @@
 // Komponen UI admin: toast, dialog konfirmasi (dengan jebakan fokus), status tombol sibuk, pesan galat.
 
-import { html, esc, raw, setHtml } from "../../core/dom.js";
+import { html, setHtml } from "../../core/dom.js";
 
 function region() {
   let r = document.querySelector(".toast-region");
@@ -89,8 +89,3 @@ export async function withBusy(button, fn, busyText = "Memproses…") {
 /** Pesan galat ramah dari AppError. */
 export const messageOf = (e) => (e && e.message) || "Terjadi kesalahan.";
 
-export function inlineAlert(kind, text) {
-  return html`<div class="alert alert--${kind}" role="${kind === "error" ? "alert" : "status"}">${text}</div>`;
-}
-
-export { esc, raw };

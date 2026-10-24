@@ -21,7 +21,6 @@ const t = () => table(SUPABASE.tables.menus);
 
 let schemaMode = "unknown";                              // "v2" | "v1"
 export const getSchemaMode = () => schemaMode;
-export const __setSchemaModeForTests = (m) => { schemaMode = m; };
 
 const same = (a, b) => a != null && b != null && String(a) === String(b);
 export const byOrder = (a, b) =>

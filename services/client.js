@@ -17,8 +17,6 @@ export function getClient() {
   return client;
 }
 
-/** Hanya untuk pengujian. */
-export function __resetClientForTests() { client = null; }
 
 export class AppError extends Error {
   constructor(message, { code, kind, cause } = {}) {

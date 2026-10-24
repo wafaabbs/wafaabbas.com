@@ -94,4 +94,3 @@ export function href(path, params = {}) {
 export const slugOk = (slug) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(slug ?? ""));
 export const articleHref = (slug) => href("article.html", { slug });
 export const categoryHref = (slug) => href("category.html", { slug });
-export const pageHref = (slug) => href("page.html", { slug });

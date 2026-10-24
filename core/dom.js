@@ -44,7 +44,6 @@ export function setHtml(el, content) {
 }
 
 export function qs(selector, root = document) { return root.querySelector(selector); }
-export function qsa(selector, root = document) { return [...root.querySelectorAll(selector)]; }
 
 /** Buat elemen dengan atribut/anak aman (textContent/setAttribute, tanpa innerHTML). */
 export function el(tag, attrs = {}, ...children) {
@@ -60,17 +59,5 @@ export function el(tag, attrs = {}, ...children) {
     if (child == null || child === false) continue;
     node.append(child instanceof Node ? child : document.createTextNode(String(child)));
   }
-  return node;
-}
-
-export function debounce(fn, wait = 250) {
-  let timer;
-  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
-}
-
-/** Ambil elemen yang diwajibkan ada; lempar error jelas bila tidak ada. */
-export function mustFind(selector, root = document) {
-  const node = root.querySelector(selector);
-  if (!node) throw new Error(`Elemen ${selector} tidak ditemukan pada halaman.`);
   return node;
 }

@@ -21,9 +21,3 @@ export function render(el, content) {
   hydrateImages(el);
 }
 
-/** Jalankan fungsi muat dengan tombol "Coba lagi" (data-retry) yang memanggil ulang. */
-export function withRetry(container, loader) {
-  const run = async () => { await loader(); };
-  container.addEventListener("click", (e) => { if (e.target.closest("[data-retry]")) run(); });
-  return run();
-}
