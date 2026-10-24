@@ -148,8 +148,8 @@ export async function launch({ origin, sdkSource }) {
     async type(selector, value) {
       await api.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
     },
-    async screenshot(file) {
-      const { data } = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+    async screenshot(file, { full = true } = {}) {
+      const { data } = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: full });
       await (await import("node:fs/promises")).writeFile(file, Buffer.from(data, "base64"));
     },
     async key(key, code = key) {

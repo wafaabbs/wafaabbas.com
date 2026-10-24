@@ -139,6 +139,23 @@ try {
     t.ok(await b.eval(`!!document.querySelector('#site-header a')`), "404 memuat header dari akar");
   });
 
+  await t.section("Matriks viewport: tanpa overflow horizontal, header ringkas, judul tidak terpotong", async () => {
+    for (const [w, h] of [[1440, 900], [1366, 768], [1280, 800], [1024, 768], [768, 1024], [390, 844], [360, 800]]) {
+      for (const p of ["/index.html", "/article.html", "/article.html?slug=artikel-5", "/category.html?slug=pajak", "/about.html", "/contact.html", "/tools.html"]) {
+        await b.open(p, { seed: seed(), width: w, height: h, mobile: w < 800 });
+        await b.settle(450);
+        const m = await b.eval(`({sw: document.documentElement.scrollWidth, hdr: document.getElementById('site-header').getBoundingClientRect().height, logo: document.querySelector('#site-header img').getBoundingClientRect().width})`);
+        t.ok(m.sw <= w + 1, `${w}x${h} ${p}: tanpa overflow (scrollWidth ${m.sw})`);
+        t.ok(m.logo >= 140 && m.logo <= 200, `${w}x${h} ${p}: logo ${Math.round(m.logo)}px dalam 140–200`);
+        t.ok(m.hdr <= (w >= 960 ? 125 : 70), `${w}x${h} ${p}: tinggi header ${Math.round(m.hdr)}px ringkas`);
+      }
+    }
+    await b.open("/index.html", { seed: seed(), width: 1366, height: 768 });
+    await b.waitFor(`document.querySelector('#hero .card')`);
+    t.ok(await b.eval(`document.querySelector('#home-main .section-head').getBoundingClientRect().top < window.innerHeight`), "1366x768: judul 'Kabar Terbaru' sudah terlihat tanpa menggulir");
+    t.ok(await b.eval(`[...document.querySelectorAll('.card--hero .card__title')].every(e => e.scrollHeight <= e.clientHeight + 2)`), "judul hero tidak terpotong pada judul fixture");
+  });
+
   await t.section("Mobile: drawer, tanpa overflow horizontal", async () => {
     await b.open("/index.html", { seed: seed(), width: 390, height: 844, mobile: true });
     await b.waitFor(`document.querySelector('#home-main .card')`);

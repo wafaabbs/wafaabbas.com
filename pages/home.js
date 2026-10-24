@@ -59,7 +59,7 @@ export function buildRubrics(articles, limit = 3) {
     if (!groups.has(key)) groups.set(key, { category: a.category, items: [] });
     groups.get(key).items.push(a);
   }
-  return [...groups.values()].filter((g) => g.items.length >= 2).slice(0, limit).map((g) => ({ ...g, items: g.items.slice(0, 4) }));
+  return [...groups.values()].filter((g) => g.items.length >= 2).slice(0, limit).map((g) => ({ ...g, items: g.items.slice(0, 3) }));
 }
 
 function sidebar(categories) {
