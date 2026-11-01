@@ -139,8 +139,8 @@ try {
     await b.settle(300);
     t.eq((await menuRow("Artikel")).is_active, false, "menu dinonaktifkan");
     await b.open("/index.html", { seed: "", clearStorage: false });
-    await b.waitFor(`document.querySelector('#site-header [data-nav-list] a')`);
-    const names = await b.eval(`[...document.querySelectorAll('#site-header [data-nav-list] a')].map(a=>a.textContent.trim())`);
+    await b.waitFor(`document.querySelector('#site-header [data-drawer-list] a')`);
+    const names = await b.eval(`[...document.querySelectorAll('#site-header [data-drawer-list] a')].map(a=>a.textContent.trim())`);
     t.ok(!names.includes("Artikel") && !names.includes("Tentang") && !names.includes("Pajak"), "menu nonaktif + submenunya hilang dari header publik", JSON.stringify(names));
     t.ok(names.includes("Beranda"), "menu aktif tetap tampil");
   });
@@ -372,6 +372,29 @@ try {
     }
     if (SHOTS) { await b.open("/admin/menus.html", { seed: admin(), width: 390, height: 844, mobile: true }); await b.settle(600); await b.screenshot(path.join(SHOTS, "admin-menus-mobile.png")); }
   });
+  await t.section("Kabar Fiskal (admin): sumber, ambil sekarang, sembunyikan", async () => {
+    await b.open("/admin/external.html", { seed: admin() });
+    await b.waitFor(`!!document.querySelector('[data-active]')`);
+    t.eq(await b.eval(`document.querySelectorAll('[data-active]').length`), 3, "3 sumber tercantum (termasuk nonaktif)");
+    t.ok(await b.eval(`[...document.querySelectorAll('#admin-main th a')].every(a=>!/evil/.test(a.getAttribute('href')))`), "tautan tak sah tidak dirender sebagai href");
+    await b.click(`.admin-head [data-fetch]`);
+    await b.waitFor(`(window.__INVOKED||[]).length === 1`);
+    t.eq(await b.eval(`window.__INVOKED[0].name`), "fetch-fiskal", "tombol Ambil sekarang memanggil Edge Function");
+    await b.waitFor(`!!document.querySelector('[data-active="agenda"]')`);
+    await b.eval(`(()=>{const c=document.querySelector('[data-active="agenda"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    await b.waitFor(`window.__DB.external_sources.find(s=>s.id==='agenda').is_active === true`);
+    t.ok(true, "sakelar mengaktifkan sumber");
+    await b.waitFor(`!!document.querySelector('[data-hide="1"]')`);
+    await b.click(`[data-hide="1"]`);
+    await b.waitFor(`window.__DB.external_news.find(n=>n.id===1).is_hidden === true`);
+    t.ok(true, "tautan disembunyikan");
+    await b.open("/admin/external.html", { seed: admin("window.__FN_ERROR='Function not found (404)';") });
+    await b.waitFor(`!!document.querySelector('.admin-head [data-fetch]')`);
+    await b.click(`.admin-head [data-fetch]`);
+    await b.waitFor(`!!document.querySelector('.toast--error')`);
+    t.ok(/belum di-deploy/.test(await b.eval(`document.querySelector('.toast--error').textContent`)), "fungsi belum di-deploy -> pesan jelas");
+  });
+
 } finally {
   await b.close();
   server.close();

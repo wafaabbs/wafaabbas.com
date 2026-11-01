@@ -16,6 +16,7 @@ const NAV = [
   { id: "menus", href: "menus.html", label: "Menu" },
   { id: "pages", href: "pages.html", label: "Halaman" },
   { id: "home", href: "home.html", label: "Beranda" },
+  { id: "external", href: "external.html", label: "Kabar Fiskal" },
 ];
 
 /** Panggil di awal tiap halaman admin. Mengembalikan { user, main } atau null (sedang diarahkan ke login). */

@@ -21,6 +21,12 @@
   --success-500: #78e096; --success-100: #12311d;
   --warning-500: #f4c95d; --warning-100: #3a2d0d;
   --info-100: #12293a;
+  --primary: #9be15f;
+  --primary-strong: #c2f09a;
+  --primary-soft: rgb(129 215 66 / 0.14);
+  --on-primary: #06141e;
+  --accent-soft: rgb(129 215 66 / 0.14);
+  --rule-grad: linear-gradient(90deg, var(--accent-500), var(--accent-300));
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 6px 16px rgb(0 0 0 / 0.45);
 }
@@ -75,3 +81,13 @@
 [data-theme="dark"] .btn--outline-accent:hover { background: var(--accent-500); color: #06141e; }
 [data-theme="dark"] .btn--outline-light { color: #fff; border-color: rgb(255 255 255 / 0.55); }
 [data-theme="dark"] .btn--outline-light:hover { background: #fff; color: var(--ink-900); }
+
+/* komponen portal */
+[data-theme="dark"] .tone--info, [data-theme="dark"] .tone-chip--info, [data-theme="dark"] .tone-text--info { color: var(--ink-200); }
+[data-theme="dark"] .ticker__item--promo { background: var(--accent-500); color: #06141e; }
+[data-theme="dark"] .ticker__sig { color: var(--accent-500); }
+[data-theme="dark"] .site-navbar { background: var(--ink-950); }
+[data-theme="dark"] .feature__chip { color: #06141e; }
+[data-theme="dark"] .site-header__side .icon-btn.brand-btn { color: var(--text-soft); }
+[data-theme="dark"] .rail { background: var(--ink-950); border: 1px solid var(--line); border-right: 0; }
+[data-theme="dark"] .calc-badge, [data-theme="dark"] .calc-table__group th { background: var(--ink-950); }

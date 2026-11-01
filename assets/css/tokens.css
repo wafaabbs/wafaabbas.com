@@ -55,6 +55,14 @@
   --link: #1f4d6b;
   --link-hover: #0a202e;
 
+  /* ---- peran komponen portal (hanya memetakan palet di atas; tidak ada warna baru) ---- */
+  --primary: var(--ink-600);
+  --primary-strong: var(--ink-800);
+  --primary-soft: rgb(31 77 107 / 0.09);
+  --on-primary: #ffffff;
+  --accent-soft: var(--accent-100);
+  --rule-grad: linear-gradient(90deg, var(--accent-500), var(--ink-600));
+
   /* ---- warna: status ---- */
   --danger-500: #b42318;
   --danger-100: #fde8e6;

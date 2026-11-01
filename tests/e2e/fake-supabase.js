@@ -193,7 +193,14 @@
 
   window.supabase = {
     createClient() {
-      return { from: (t) => new Query(t), auth, storage, rpc: async () => ({ data: null, error: null }) };
+      const functions = {
+        async invoke(name, opts) {
+          (window.__INVOKED = window.__INVOKED || []).push({ name, body: opts && opts.body });
+          if (window.__FN_ERROR) return { data: null, error: { message: window.__FN_ERROR } };
+          return { data: window.__FN_RESULT || { results: [{ source: "berita-fiskal", status: "ok", count: 3 }] }, error: null };
+        },
+      };
+      return { from: (t) => new Query(t), auth, storage, functions, rpc: async () => ({ data: null, error: null }) };
     },
   };
 })();

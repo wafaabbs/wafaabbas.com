@@ -13,6 +13,17 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Data pasar palsu (BUKAN data nyata) untuk services/markets.js: Frankfurter + currency-api disajikan lokal.
+const FX = { USD: [18183, 18128], EUR: [20150.5, 20201.85], SGD: [14153.12, 14153.12] };
+const METAL = { latest: { xau: 70165396.32, xag: 889336.68 }, prev: { xau: 72646903.2, xag: 880000 } };
+export function marketFixture(u) {
+  const fx = u.match(/^https:\/\/api\.frankfurter\.dev\/v2\/rates\?base=([A-Z]{3})&quotes=IDR/);
+  if (fx && FX[fx[1]]) return FX[fx[1]].map((rate, i) => ({ date: `2026-10-${29 + i}`, base: fx[1], quote: "IDR", rate }));
+  const m = u.match(/currency-api@(latest|[\d-]+)\/v1\/currencies\/(xau|xag)\.min\.json$/);
+  if (m) return { date: m[1] === "latest" ? "2026-11-01" : m[1], [m[2]]: { idr: METAL[m[1] === "latest" ? "latest" : "prev"][m[2]] } };
+  return null;
+}
+
 export const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MIME = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -102,6 +113,10 @@ export async function launch({ origin, sdkSource }) {
       else if (/unpkg\.com|cdn\.jsdelivr\.net.*supabase/.test(u)) {
         await cdp.send("Fetch.fulfillRequest", { requestId: p.requestId, responseCode: 200,
           responseHeaders: [{ name: "content-type", value: "text/javascript" }], body: Buffer.from(sdkSource).toString("base64") });
+      } else if (marketFixture(u)) {
+        await cdp.send("Fetch.fulfillRequest", { requestId: p.requestId, responseCode: 200,
+          responseHeaders: [{ name: "content-type", value: "application/json" }, { name: "access-control-allow-origin", value: "*" }],
+          body: Buffer.from(JSON.stringify(marketFixture(u))).toString("base64") });
       } else if (u.startsWith("data:") || u.startsWith("about:")) { await cdp.send("Fetch.continueRequest", { requestId: p.requestId }); }
       else { state.blocked.push(u); await cdp.send("Fetch.failRequest", { requestId: p.requestId, errorReason: "BlockedByClient" }); }
     } catch (_) { /* target ditutup */ }

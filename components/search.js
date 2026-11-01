@@ -4,18 +4,29 @@
 import { html } from "../core/dom.js";
 import { pathTo } from "../core/url.js";
 import { icon } from "./icons.js";
-import { LIMITS } from "../core/config.js";
+import { LIMITS, SITE } from "../core/config.js";
 
 export function searchOverlayHtml() {
   return html`
     <div class="search-overlay" id="search-overlay" role="dialog" aria-modal="true" aria-label="Pencarian artikel" data-search-overlay>
       <div class="search-overlay__box">
+        <div class="search-overlay__head">
+          <span class="tone-tile tone--primary">${icon("search", { size: 17 })}</span>
+          <div><b>Cari di ${SITE.name}</b><small>Judul dan ringkasan artikel yang sudah terbit</small></div>
+          <button type="button" class="panel-close" data-search-close aria-label="Tutup pencarian">${icon("close", { size: 14 })}</button>
+        </div>
         <form class="search-overlay__form" action="${pathTo("article.html")}" method="get" role="search" data-search-form>
           <label class="visually-hidden" for="search-overlay-input">Cari artikel</label>
-          <input id="search-overlay-input" name="q" type="search" maxlength="${LIMITS.searchMaxLength}" placeholder="Cari artikel…" autocomplete="off" required>
+          <input id="search-overlay-input" name="q" type="search" maxlength="${LIMITS.searchMaxLength}" placeholder="Ketik kata kunci, mis. PPh 21…" autocomplete="off" required>
           <button type="submit" class="btn btn--accent">${icon("search", { size: 18 })} Cari</button>
         </form>
-        <p class="search-overlay__hint">Tekan Esc untuk menutup</p>
+        <div class="search-overlay__quick" aria-label="Pintasan">
+          <span>Pintasan</span>
+          <a class="chip" href="${pathTo("article.html")}">${icon("fileText", { size: 14 })} Semua artikel</a>
+          <a class="chip" href="${pathTo("alat.html")}">${icon("grid", { size: 14 })} Peralatan</a>
+          <a class="chip" href="${pathTo("about.html")}">${icon("user", { size: 14 })} Tentang</a>
+        </div>
+        <p class="search-overlay__hint">Tekan <kbd>Esc</kbd> untuk menutup</p>
       </div>
     </div>`;
 }

@@ -1,4 +1,5 @@
-// Footer. Menu footer dikelola terpisah dari menu header (lokasi 'footer' di CMS).
+// Footer bergaya portal: pita merek (logo, deskripsi, sosial), kolom tautan berjudul-titik, kontak, bilah bawah.
+// Menu footer dikelola terpisah dari menu header (lokasi 'footer' di CMS).
 // Bila menu footer CMS kosong/gagal, footer memakai tautan cadangan; informasi kontak berasal dari core/config.js.
 
 import { html, setHtml } from "../core/dom.js";
@@ -27,27 +28,39 @@ export function footerColumns(tree) {
 }
 
 const colHtml = (c) => html`
-  <div>
+  <div class="site-footer__col">
     <h2 class="site-footer__heading">${c.titleLink ? html`<a href="${c.titleLink.href}" ${c.titleLink.attrs}>${c.title}</a>` : c.title}</h2>
     <ul class="site-footer__list">
       ${c.items.map(({ node, link }) => html`<li><a href="${link.href}" ${link.attrs} ${link.current ? html`aria-current="page"` : ""}>${node.label}</a></li>`)}
     </ul>
   </div>`;
 
+const contactCol = () => html`
+  <div class="site-footer__col site-footer__contact">
+    <h2 class="site-footer__heading">Kontak</h2>
+    <a class="site-footer__contact-item" href="${"mailto:" + SITE.contact.email}">${icon("mail", { size: 18 })}<span><small>Email</small><strong>${SITE.contact.email}</strong></span></a>
+    <a class="site-footer__contact-item" href="${SITE.contact.whatsapp.url}" target="_blank" rel="noopener noreferrer">${icon("whatsapp", { size: 18 })}<span><small>WhatsApp</small><strong>${SITE.contact.whatsapp.label}</strong></span></a>
+  </div>`;
+
+const STATIC_COL = {
+  title: "Situs",
+  items: [["Artikel", "article.html"], ["Kabar Fiskal", "kabar-fiskal.html"], ["Peralatan", "alat.html"], ["Tentang", "about.html"]]
+    .map(([label, url]) => ({ node: { label }, link: menuLink({ url }) })).filter((x) => x.link),
+};
+
 function footerHtml(tree) {
   const cols = footerColumns(tree);
   return html`
-    <div class="container site-footer__main">
-      <div class="site-footer__brand">
-        <a href="${pathTo("index.html")}" aria-label="${SITE.name} — beranda"><img src="${LOGO_WHITE()}" alt="${SITE.name}" width="250" height="36" loading="lazy"></a>
-        <p>${SITE.description}</p>
-        <div class="site-footer__social" role="group" aria-label="Media sosial">${socialLinksHtml()}</div>
+    <div class="container">
+      <div class="site-footer__band">
+        <a class="site-footer__logo" href="${pathTo("index.html")}" aria-label="${SITE.name} — beranda"><img src="${LOGO_WHITE()}" alt="${SITE.name}" width="250" height="36" loading="lazy"></a>
+        <p class="site-footer__desc">${SITE.description} Ditulis untuk pembaca yang ingin memahami aturan dan praktik akuntansi, perpajakan, serta keuangan dengan bahasa yang lugas.</p>
+        <div class="site-footer__social" role="group" aria-label="Media sosial">${socialLinksHtml({ size: 15 })}</div>
       </div>
-      <nav class="site-footer__cols" aria-label="Navigasi footer" data-footer-cols>${cols.map(colHtml)}</nav>
-      <div class="site-footer__contact">
-        <h2 class="site-footer__heading">Kontak</h2>
-        <a class="site-footer__contact-item" href="${"mailto:" + SITE.contact.email}">${icon("mail", { size: 20 })}<span><small>Email</small><strong>${SITE.contact.email}</strong></span></a>
-        <a class="site-footer__contact-item" href="${SITE.contact.whatsapp.url}" target="_blank" rel="noopener noreferrer">${icon("whatsapp", { size: 20 })}<span><small>WhatsApp</small><strong>${SITE.contact.whatsapp.label}</strong></span></a>
+      <div class="site-footer__grid">
+        <nav class="site-footer__cols" aria-label="Navigasi footer" data-footer-cols>${cols.map(colHtml)}</nav>
+        ${colHtml(STATIC_COL)}
+        ${contactCol()}
       </div>
     </div>
     <div class="site-footer__bar">

@@ -1,4 +1,4 @@
-// Detail artikel (article.html?slug=...): judul, meta, isi markdown aman, daftar isi, bagikan, artikel terkait.
+// Detail artikel (article.html?slug=...): judul, meta, isi markdown aman, daftar isi, simpan, bagikan, artikel terkait.
 
 import { html, raw } from "../core/dom.js";
 import { SITE } from "../core/config.js";
@@ -13,6 +13,8 @@ import { breadcrumbs, toLdItems } from "../components/breadcrumbs.js";
 import { tocHtml, initTocSpy } from "../components/toc.js";
 import { emptyState, errorState } from "../components/states.js";
 import { icon } from "../components/icons.js";
+import { shareHtml, bindShare } from "../components/share.js";
+import { saveButtonHtml, bindSaveButtons } from "../components/saved.js";
 import { bootChrome, render } from "./boot.js";
 
 bootChrome();
@@ -27,19 +29,6 @@ function notFound() {
     text: "Artikel ini belum tersedia atau belum dipublikasikan.",
     action: { href: pathTo("article.html"), label: "Lihat semua artikel" },
   })}</div>`);
-}
-
-function shareHtml(title) {
-  const url = location.href;
-  const wa = "https://wa.me/?text=" + encodeURIComponent(`${title} ${url}`);
-  const x = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(title) + "&url=" + encodeURIComponent(url);
-  return html`
-    <div class="share" role="group" aria-label="Bagikan artikel">
-      <span class="share__label">Bagikan</span>
-      <a class="btn btn--ghost btn--sm" href="${wa}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-      <a class="btn btn--ghost btn--sm" href="${x}" target="_blank" rel="noopener noreferrer">X</a>
-      <button type="button" class="btn btn--ghost btn--sm" data-copy-link>${icon("link", { size: 14 })} Salin tautan</button>
-    </div>`;
 }
 
 async function load() {
@@ -86,13 +75,14 @@ async function load() {
         <div class="article__meta">
           ${article.published_at ? html`<span>${icon("calendar", { size: 16 })} <time datetime="${isoDate(article.published_at)}">${formatDate(article.published_at)}</time></span>` : ""}
           <span>${icon("clock", { size: 16 })} ${minutes} menit baca</span>
+          <span class="article__actions">${saveButtonHtml(article)}${shareHtml(article.title)}</span>
         </div>
       </header>
       ${cover ? html`<figure class="article__cover"><div class="article__cover-frame"><img src="${cover}" alt="${article.title}" width="1200" height="675" decoding="async" fetchpriority="high" data-fallback></div></figure>` : ""}
       <div class="article__layout">
         <div class="article__body">
           <div class="prose" id="article-content">${raw(bodyHtml)}</div>
-          <div class="article__foot">${shareHtml(article.title)}
+          <div class="article__foot"><div class="share" role="group" aria-label="Simpan atau bagikan artikel"><span class="share__label">Suka tulisan ini?</span>${saveButtonHtml(article)}${shareHtml(article.title)}</div>
             <a class="btn btn--outline btn--sm" href="${pathTo("article.html")}">← Semua artikel</a></div>
         </div>
         ${toc ? html`<aside class="article__aside" aria-label="Daftar isi">${toc}</aside>` : ""}
@@ -108,11 +98,8 @@ async function load() {
   if (details && window.matchMedia("(min-width: 1000px)").matches) details.open = true;
   initTocSpy(root);
 
-  root.querySelector("[data-copy-link]")?.addEventListener("click", async (e) => {
-    const btn = e.currentTarget;
-    try { await navigator.clipboard.writeText(location.href); btn.textContent = "Tautan disalin ✓"; }
-    catch (_) { btn.textContent = "Salin manual dari bilah alamat"; }
-  });
+  bindShare(article.title);
+  bindSaveButtons((s) => (s === article.slug ? article : null));
 
   // Artikel terkait (tidak boleh menggagalkan artikel).
   try {

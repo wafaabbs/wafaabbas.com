@@ -29,11 +29,14 @@
 <header id="site-header"></header>
 <main id="main-content" tabindex="-1">
   <h1 class="visually-hidden">wafaabbas.com — Akuntansi, Perpajakan &amp; Keuangan</h1>
-  <div id="promo"></div>
-  <section id="hero" class="container hero-section" aria-label="Sorotan"></section>
-  <div class="container layout-sidebar section">
-    <div id="home-main"></div>
-    <aside id="home-side" aria-label="Sidebar"></aside>
+  <div class="container home">
+    <div id="promo" class="home__ads" hidden></div>
+    <section id="hero" class="home__top" aria-label="Sorotan"></section>
+    <section id="home-info" class="infobox" aria-labelledby="info-h" hidden></section>
+    <div class="home__main">
+      <div id="home-main" class="home__col"></div>
+      <aside id="home-side" class="home__rail" aria-label="Sidebar"></aside>
+    </div>
   </div>
 </main>
 <footer id="site-footer"></footer>

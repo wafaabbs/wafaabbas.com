@@ -6,13 +6,15 @@ Situs edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas. HTML + CSS + 
 
 - **Publik**: beranda editorial (hero unggulan, kabar terbaru, blok per rubrik, sidebar), daftar artikel dengan pencarian & pagination, detail artikel (daftar isi otomatis, artikel terkait, ukuran huruf), kategori bertingkat, halaman informatif dari CMS, tentang, kontak, tools, 404.
 - **Navigasi dari CMS**: menu header (dengan submenu) dan footer dibangun dari tabel `menus`. Bila gagal dimuat, menu cadangan bawaan (`core/config.js`) dipakai agar halaman tidak kosong.
+- **Peralatan** (`alat.html`) dengan **Kalkulator Pajak** (`kalkulator-pajak.html`; rumus di `core/tax.js`).
+- **Kabar Fiskal** (`kabar-fiskal.html`): tautan otomatis dari fiskal.kemenkeu.go.id lewat Edge Function `supabase/functions/fetch-fiskal` (lihat `supabase/README.md`).
 - **Admin** (`/admin/`): ringkasan, artikel (editor markdown + pratinjau, unggah thumbnail, slot unggulan), kategori, **Menu Manager**, **Page Manager**, konten beranda (unggulan & banner).
 
 ## Struktur
 
 ```
-index.html article.html category.html page.html about.html contact.html tools.html 404.html
-admin/                 login, dashboard, posts, editor, categories, menus, pages, home  (semua noindex)
+index.html article.html category.html page.html about.html contact.html alat.html kalkulator-pajak.html kabar-fiskal.html tools.html (alih ke alat.html) 404.html
+admin/                 login, dashboard, posts, editor, categories, menus, pages, home, external  (semua noindex)
 assets/css/            tokens → base → layout → components → pages → theme-dark   (+ admin.css untuk panel)
 assets/fonts/          Plus Jakarta Sans & Newsreader (OFL, self-hosted)
 assets/icons/         logo merek asli (LinkedIn, Instagram, WhatsApp)
@@ -22,7 +24,7 @@ core/                  config, dom (html`` auto-escape), url (allowlist tautan),
 services/              akses Supabase per domain: client, auth, articles, categories, menus, pages, featured, banners, storage
 components/            header, footer, kartu artikel, pagination, breadcrumb, pencarian, TOC, editor markdown, ikon, state
 pages/                 pengendali per halaman publik;  pages/admin/ untuk panel
-supabase/              migrasi SQL, verifikasi, rollback (BELUM dijalankan di database mana pun) — baca supabase/README.md
+supabase/              migrasi SQL, Edge Function fetch-fiskal, verifikasi, rollback (BELUM dijalankan di database mana pun) — baca supabase/README.md
 scripts/               generate-sitemap.mjs (butuh SITE_URL)
 tests/                 unit, hygiene, e2e (browser headless), sql (Postgres via PGlite)
 ```

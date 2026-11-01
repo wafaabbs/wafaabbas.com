@@ -13,7 +13,10 @@ export const SUPABASE = {
     featuredPosts: "featured_posts",
     banners: "banners",
     pages: "pages",
+    externalSources: "external_sources",
+    externalNews: "external_news",
   },
+  functions: { fetchFiskal: "fetch-fiskal" },
   buckets: { thumbnails: "thumbnails" },
 };
 
@@ -38,6 +41,9 @@ export const SITE = {
   ],
 };
 
+// Sumber tautan eksternal "Kabar Fiskal" (lihat supabase/migrations/003). Hanya URL di host ini yang dirender.
+export const EXTERNAL = { host: "fiskal.kemenkeu.go.id", origin: "https://fiskal.kemenkeu.go.id", label: "Kementerian Keuangan – DJSEF" };
+
 export const LIMITS = {
   pageSize: 12,
   homeLatest: 9,
@@ -52,14 +58,15 @@ export const FALLBACK_MENUS = {
   header: [
     { label: "Beranda", url: "index.html" },
     { label: "Artikel", url: "article.html" },
-    { label: "Tools", url: "tools.html" },
+    { label: "Peralatan", url: "alat.html" },
+    { label: "Berita", url: "kabar-fiskal.html" },
     { label: "Tentang", url: "about.html" },
     { label: "Kontak", url: "contact.html" },
   ],
   footer: [
     { label: "Beranda", url: "index.html" },
     { label: "Artikel", url: "article.html" },
-    { label: "Tools", url: "tools.html" },
+    { label: "Peralatan", url: "alat.html" },
     { label: "Tentang", url: "about.html" },
     { label: "Kontak", url: "contact.html" },
   ],

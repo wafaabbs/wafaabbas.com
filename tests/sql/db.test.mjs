@@ -274,6 +274,40 @@ async function suite(PGlite, idType) {
   check(`[${idType}] non-admin TIDAK bisa mendaftar isi bucket`, (await as(db, "authenticated", USER, `select count(*)::int as n from storage.objects`)).rows?.[0]?.n === 0);
   check(`[${idType}] admin bisa mendaftar isi bucket (dibutuhkan remove())`, ((await as(db, "authenticated", ADMIN, `select count(*)::int as n from storage.objects`)).rows?.[0]?.n ?? 0) >= 1);
 
+  // ---- 003: tautan eksternal (Kabar Fiskal) ----
+  e = await (async () => { const d = new PGlite(); await d.exec(baseline(idType)); await d.exec(SEED); await d.exec(MIG("001_menus_hierarchy_and_pages.sql"));
+    const x = await d.exec(MIG("003_external_news.sql")).then(() => null, (y) => y); await d.close(); return x; })();
+  check(`[${idType}] 003 menolak jalan sebelum 002`, e && /002/.test(e.message), e && e.message);
+  await db.exec(MIG("003_external_news.sql"));
+  await db.exec(MIG("003_external_news.sql"));                          // idempoten
+  check(`[${idType}] 003 idempoten & 6 sumber awal`, (await db.query(`select count(*)::int n from public.external_sources`)).rows[0].n === 6);
+  await db.exec(`insert into public.external_news (source_id,title,url,published_at) values
+    ('berita-fiskal','Tampil','https://fiskal.kemenkeu.go.id/baca/2026/10/09/1-a','2026-10-09'),
+    ('berita-fiskal','Tersembunyi','https://fiskal.kemenkeu.go.id/baca/2026/10/08/2-b','2026-10-08'),
+    ('agenda','Dari sumber nonaktif','https://fiskal.kemenkeu.go.id/informasi-publik/agenda#x','2026-10-01');
+    update public.external_news set is_hidden = true where title = 'Tersembunyi';
+    update public.external_sources set is_active = false where id = 'agenda';`);
+  r = await as(db, "anon", {}, `select title from public.external_news order by title`);
+  check(`[${idType}] anon hanya melihat tautan tampil dari sumber aktif`, JSON.stringify(r.rows?.map((x) => x.title)) === '["Tampil"]', JSON.stringify(r));
+  check(`[${idType}] anon tidak melihat sumber nonaktif`, (await count(db, "anon", {}, "external_sources")) === 5);
+  check(`[${idType}] admin melihat semua tautan & sumber`, (await count(db, "authenticated", ADMIN, "external_news")) === 3 && (await count(db, "authenticated", ADMIN, "external_sources")) === 6);
+  r = await as(db, "anon", {}, `insert into public.external_news (source_id,title,url) values ('pmk','x','https://fiskal.kemenkeu.go.id/z')`);
+  check(`[${idType}] anon tidak bisa menambah tautan`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", USER, `update public.external_news set is_hidden = true`);
+  check(`[${idType}] non-admin tidak bisa menyembunyikan tautan`, !!r.error || r.rowCount === 0);
+  r = await as(db, "authenticated", ADMIN, `update public.external_news set is_hidden = true where title = 'Tampil' returning is_hidden`);
+  check(`[${idType}] admin bisa menyembunyikan tautan`, r.rows?.[0]?.is_hidden === true, JSON.stringify(r));
+  r = await as(db, "authenticated", ADMIN, `update public.external_news set url = 'https://fiskal.kemenkeu.go.id/lain' where title = 'Tampil'`);
+  check(`[${idType}] admin TIDAK bisa mengubah URL/judul (grant kolom)`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", ADMIN, `insert into public.external_news (source_id,title,url) values ('pmk','x','https://fiskal.kemenkeu.go.id/z')`);
+  check(`[${idType}] admin tidak menambah tautan manual (hanya Edge Function)`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", ADMIN, `update public.external_sources set is_active = true where id = 'agenda' returning is_active`);
+  check(`[${idType}] admin bisa mengaktifkan sumber`, r.rows?.[0]?.is_active === true, JSON.stringify(r));
+  e = await db.exec(`insert into public.external_news (source_id,title,url) values ('pmk','Jahat','https://evil.example/x')`).then(() => null, (y) => y);
+  check(`[${idType}] CHECK menolak URL di luar fiskal.kemenkeu.go.id (bahkan service role)`, e && /check/i.test(e.message), e && e.message);
+  r = await as(db, "authenticated", ADMIN, `delete from public.external_news where title = 'Dari sumber nonaktif' returning id`);
+  check(`[${idType}] admin bisa menghapus tautan`, r.rows?.length === 1, JSON.stringify(r));
+
   // fungsi
   r = await as(db, "anon", {}, `select public.wafa_is_admin() as a`);
   check(`[${idType}] wafa_is_admin() false untuk anon`, r.rows?.[0]?.a === false);

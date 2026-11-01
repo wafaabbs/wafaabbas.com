@@ -35,7 +35,7 @@ const [articles, categories, pages] = await Promise.all([
 
 const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const entries = [
-  ...["", "article.html", "tools.html", "about.html", "contact.html"].map((p) => url(p)),
+  ...["", "article.html", "alat.html", "kalkulator-pajak.html", "kabar-fiskal.html", "about.html", "contact.html"].map((p) => url(p)),
   ...articles.filter((a) => slugRe.test(a.slug)).map((a) => url(`article.html?slug=${a.slug}`, day(a.updated_at || a.published_at))),
   ...categories.filter((c) => slugRe.test(c.slug)).map((c) => url(`category.html?slug=${c.slug}`)),
   ...pages.filter((p) => slugRe.test(p.slug)).map((p) => url(`page.html?slug=${p.slug}`, day(p.updated_at))),
