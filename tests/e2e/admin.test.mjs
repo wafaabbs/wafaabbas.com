@@ -392,7 +392,7 @@ try {
     await b.waitFor(`!!document.querySelector('.admin-head [data-fetch]')`);
     await b.click(`.admin-head [data-fetch]`);
     await b.waitFor(`!!document.querySelector('.toast--error')`);
-    t.ok(/belum di-deploy/.test(await b.eval(`document.querySelector('.toast--error').textContent`)), "fungsi belum di-deploy -> pesan jelas");
+    t.ok(/tidak ditemukan.*fetch-fiskal/.test(await b.eval(`document.querySelector('.toast--error').textContent`)), "fungsi belum di-deploy -> pesan jelas");
   });
 
 } finally {

@@ -10,7 +10,7 @@ sebaiknya pertama di proyek **staging** (salinan proyek) lalu produksi.
 | `migrations/001_menus_hierarchy_and_pages.sql` | Kolom `location`, `is_active`, `updated_at` pada `menus`; trigger aturan hierarki (maks. 2 tingkat, tanpa siklus); constraint URL; tabel baru `pages` (halaman CMS). Aditif & idempoten. |
 | `migrations/002_rls_admin_hardening.sql` | `public.wafa_is_admin()`; RLS pada 6 tabel; baca publik hanya konten terbit/aktif; tulis hanya admin; cabut `TRUNCATE`/`TRIGGER`/`REFERENCES`; kebijakan Storage `thumbnails`. Menolak berjalan bila belum ada admin. |
 | `migrations/003_external_news.sql` | "Kabar Fiskal": tabel `external_sources` (6 sumber awal) & `external_news` (tautan judul/tanggal/URL dari fiskal.kemenkeu.go.id). Publik baca tautan tampil dari sumber aktif; admin hanya menyalakan sumber & menyembunyikan/menghapus tautan (grant kolom); penulisan hanya oleh Edge Function. CHECK membatasi URL ke host sumber. Butuh 002. |
-| `functions/fetch-fiskal/` | Edge Function pengambil tautan (`index.ts`) + pembaca HTML murni (`parse.js`, diuji di `tests/unit`). |
+| `functions/fetch-fiskal/` | Edge Function pengambil tautan (`index.ts`) + pembaca HTML murni (`parse.js`, diuji di `tests/unit`). `index.single.ts` = gabungan keduanya untuk editor Dashboard (dibangkitkan oleh `scripts/build-fetch-fiskal-single.mjs`). |
 | `verify/00_snapshot.sql` | Read-only. Potret kebijakan & grant sebelum perubahan (dasar rollback). |
 | `verify/01_verify_after_002.sql` | Read-only. Simulasi anon / non-admin / admin dalam transaksi yang di-rollback. |
 | `rollback/` | Cara membatalkan (lihat README di sana). |
@@ -53,9 +53,19 @@ pembaca diarahkan ke situs sumber. Sebelum langkah di bawah dijalankan, halaman 
 1. **Migrasi**: jalankan `migrations/003_external_news.sql` (staging dulu). Rollback: `rollback/003_down.sql`.
 2. **Deploy fungsi** (Supabase CLI, dari akar repo):
    ```
-   supabase functions deploy fetch-fiskal --project-ref sjgsrposlucbkabxaodm
-   supabase secrets set FETCH_FISKAL_SECRET=<string-acak-panjang> --project-ref sjgsrposlucbkabxaodm
+   npx supabase login
+   npx supabase functions deploy fetch-fiskal --no-verify-jwt --project-ref sjgsrposlucbkabxaodm
+   npx supabase secrets set FETCH_FISKAL_SECRET=<string-acak-panjang> --project-ref sjgsrposlucbkabxaodm
    ```
+   Tanpa CLI: Dashboard → **Edge Functions → Deploy a new function → Via Editor**, nama `fetch-fiskal`, lalu salin
+   **seluruh isi `functions/fetch-fiskal/index.single.ts`** (versi satu berkas: index.ts + parse.js digabung) ke `index.ts`
+   di editor, deploy, dan di pengaturan fungsi **matikan "Enforce JWT verification"**.
+   (Menyalin `index.ts` saja akan gagal dengan "Module not found …/parse.js".)
+   Rahasia: Dashboard → **Edge Functions → Secrets** → tambah `FETCH_FISKAL_SECRET`.
+
+   `--no-verify-jwt` / JWT verification OFF diperlukan karena kunci publik proyek berformat baru (`sb_publishable_…`, bukan JWT)
+   sehingga panggilan cron akan ditolak gerbang JWT. Aman: fungsi memeriksa izinnya sendiri (header `x-cron-secret`
+   atau JWT pengguna dengan `app_metadata.role = admin`); pemanggil lain mendapat 403.
    `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` sudah tersedia otomatis di Edge Function. **Jangan** menaruh service role key di repositori.
 3. **Uji sekali**: buka `/admin/external.html` → **Ambil sekarang**. Kolom Status per sumber harus "OK" dengan jumlah butir > 0.
 4. **Jadwal otomatis** (SQL Editor; butuh ekstensi `pg_cron` dan `pg_net` aktif). Simpan rahasia yang sama di Vault:

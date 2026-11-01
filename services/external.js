@@ -47,7 +47,12 @@ export async function fetchNow(source) {
   try { res = await getClient().functions.invoke(SUPABASE.functions.fetchFiskal, { body: source ? { source } : {} }); }
   catch (e) { throw normalizeError(e); }
   if (res.error) {
-    const msg = /404|not found/i.test(res.error.message || "") ? "Edge Function fetch-fiskal belum di-deploy (lihat supabase/README.md)." : res.error.message;
+    // FunctionsFetchError ("Failed to send a request") = fungsi tak terjangkau; paling sering karena belum ter-deploy
+    // (404 dari gerbang tanpa izin CORS lengkap) atau nama fungsinya bukan "fetch-fiskal".
+    const unreachable = /404|not found|failed to send a request/i.test(res.error.message || "");
+    const msg = unreachable
+      ? `Edge Function "${SUPABASE.functions.fetchFiskal}" tidak ditemukan/tidak terjangkau. Pastikan sudah ter-deploy dengan nama persis "${SUPABASE.functions.fetchFiskal}" (lihat supabase/README.md).`
+      : res.error.message;
     throw new AppError(msg || "Pengambilan gagal.", { kind: "function", cause: res.error });
   }
   return res.data || { results: [] };
