@@ -11,8 +11,9 @@ const DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "su
 export const OUT = path.join(DIR, "index.single.ts");
 
 export function buildSingle() {
-  const parse = readFileSync(path.join(DIR, "parse.js"), "utf8").replace(/^export /gm, "");
-  const index = readFileSync(path.join(DIR, "index.ts"), "utf8");
+  const lf = (f) => readFileSync(path.join(DIR, f), "utf8").replace(/\r\n/g, "\n");   // abaikan CRLF dari checkout Windows
+  const parse = lf("parse.js").replace(/^export /gm, "");
+  const index = lf("index.ts");
   const importParse = /^import \{[^}]*\} from "\.\/parse\.js";\r?\n/m;
   const importSdk = /^import \{ createClient \} from "[^"]+";\r?\n/m;
   const sdkLine = index.match(importSdk)[0];

@@ -273,12 +273,36 @@ try {
     t.ok(contrast >= 7, `kontras teks utama mode gelap ${contrast.toFixed(1)}:1 (>= 7)`);
     await b.click(`.site-header__actions [data-theme-toggle]`);
     t.eq(await b.eval(`document.documentElement.dataset.theme`), "light", "klik lagi -> terang");
-    // ukuran teks: kontrol segmen
-    await b.click(`.site-header__tools [data-font-set=lg]`);
-    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "lg", "ukuran teks besar");
-    t.eq(await b.eval(`document.querySelector('.site-header__tools [data-font-set=lg]').getAttribute('aria-pressed')`), "true", "segmen aktif ditandai");
+    // ukuran teks: 6 tingkat (0..5 = 76/81/87/93/100/112%), standar 2 (87%), tombol "Aa" + panel penggeser
+    const rootPx = () => b.eval(`parseFloat(getComputedStyle(document.documentElement).fontSize)`);
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "2", "ukuran standar = tingkat 2");
+    t.ok(Math.abs((await rootPx()) - 16 * 0.87) < 0.2, "tingkat 2 = 87% (≈13,9px)");
+    t.eq(await b.eval(`document.querySelectorAll('.site-header__tools [data-fs-toggle]').length`), 1, "satu tombol \"Aa\", bukan deretan tombol");
+    t.ok(await b.eval(`document.querySelector('.site-header__tools .fs__pop').hidden`), "panel tertutup secara bawaan");
+    await b.click(`.site-header__tools [data-fs-toggle]`);
+    t.ok(await b.eval(`!document.querySelector('.site-header__tools .fs__pop').hidden && document.activeElement.matches('[data-fs-range]')`), "panel terbuka, fokus ke penggeser");
+    await b.click(`.site-header__tools [data-fs-step="1"]`);
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "3", "tombol A+ -> tingkat 3 (93%)");
+    t.eq(await b.eval(`document.querySelector('.site-header__tools [data-fs-value]').textContent`), "93%", "persen tampil");
+    await b.eval(`(()=>{const r=document.querySelector('.site-header__tools [data-fs-range]');r.value='5';r.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+    t.ok((await b.eval(`document.documentElement.dataset.fontSize`)) === "5" && Math.abs((await rootPx()) - 16 * 1.12) < 0.2, "penggeser -> tingkat 5 (112%)");
+    t.ok(await b.eval(`document.querySelector('.site-header__tools [data-fs-step="1"]').disabled && !document.querySelector('.site-header__tools [data-fs-reset]').hidden`), "batas atas: A+ nonaktif, tombol kembali ke standar muncul");
+    await b.key("Escape");
+    t.ok(await b.eval(`document.querySelector('.site-header__tools .fs__pop').hidden`), "Esc menutup panel");
     await b.open("/about.html", { seed: "", clearStorage: false });
-    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "lg", "ukuran teks tersimpan");
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "5", "ukuran teks tersimpan antar-halaman (dipasang sebelum render)");
+    await b.click(`.site-header__tools [data-fs-toggle]`);
+    await b.click(`.site-header__tools [data-fs-reset]`);
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "2", "kembali ke standar");
+    await b.open("/about.html", { seed: "localStorage.setItem('wafa_font_size','md');", clearStorage: true });
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "4", "pilihan lama 'md' (100%) dipetakan ke tingkat 4 (100%)");
+    await b.open("/admin/login.html", { seed: "localStorage.setItem('wafa_font_size','0');" });
+    t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "4", "panel admin tetap 100% (tidak ikut preferensi pembaca)");
+    // mode gelap: tombol berlatar hijau harus berteks gelap (sebelumnya .btn--ghost: teks terang di atas hijau)
+    await b.open("/article.html?slug=artikel-5", { seed: seed(), width: 1280, height: 800, colorScheme: "dark" });
+    await b.waitFor(`!!document.querySelector('#article-root .prose')`);
+    const lowGreen = await b.eval(`(()=>{const rgb=(s)=>(s.match(/[\d.]+/g)||[]).slice(0,4).map(Number);const L=([r,g,b])=>{const f=(v)=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b)};const bgOf=(el)=>{for(let e=el;e;e=e.parentElement){const c=rgb(getComputedStyle(e).backgroundColor);if(c.length>=3&&(c[3]===undefined||c[3]>0.5))return c}return [255,255,255]};return [...document.querySelectorAll('.btn, button, a')].filter(e=>e.getBoundingClientRect().width&&e.textContent.trim()).filter(e=>{const bg=bgOf(e),fg=rgb(getComputedStyle(e).color);const green=bg[1]>150&&bg[1]>bg[0]+30&&bg[1]>bg[2]+40;const a=L(fg),d=L(bg);return green&&(Math.max(a,d)+0.05)/(Math.min(a,d)+0.05)<4.5}).map(e=>e.textContent.trim().slice(0,20))})()`);
+    t.eq(lowGreen, [], "mode gelap: tidak ada tombol hijau berkontras < 4,5:1 (mis. Simpan, Bagikan)");
     // logo merek asli
     t.eq(await b.eval(`document.querySelectorAll('#site-header .site-header__side .brand-icon').length`), 3, "3 logo merek (LinkedIn, Instagram, WhatsApp) di header");
     t.ok(await b.eval(`[...document.querySelectorAll('.brand-icon')].every(e=>getComputedStyle(e).maskImage.includes('/assets/icons/') || getComputedStyle(e).webkitMaskImage.includes('/assets/icons/'))`), "logo memakai berkas di assets/icons/");

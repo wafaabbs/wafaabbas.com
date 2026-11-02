@@ -149,10 +149,13 @@
 }
 
 /* Ukuran teks yang dapat diatur pembaca (komponen font-size) */
-html[data-font-size="sm"] { font-size: 93.75%; }
-html[data-font-size="md"] { font-size: 100%; }
-html[data-font-size="lg"] { font-size: 112.5%; }
-html[data-font-size="xl"] { font-size: 125%; }
+/* 0..5 = 76% 81% 87% 93% 100% 112%; standar = 2 (87%). Nilai dipasang lebih awal oleh assets/js/theme-init.js. */
+html[data-font-size="0"] { font-size: 76%; }
+html[data-font-size="1"] { font-size: 81%; }
+html[data-font-size="2"] { font-size: 87%; }
+html[data-font-size="3"] { font-size: 93%; }
+html[data-font-size="4"] { font-size: 100%; }
+html[data-font-size="5"] { font-size: 112%; }
 
 @media (prefers-reduced-motion: reduce) {
   :root { --dur-fast: 0ms; --dur: 0ms; }

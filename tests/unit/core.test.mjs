@@ -157,7 +157,7 @@ await t.section("Kabar Fiskal: pembaca HTML sumber", async () => {
   t.eq(fk.parseSource("list", page(item(`<h1><a href="/baca/x"><script>alert(1)</script><b>Judul</b> aman</a></h1>`)))[0].title, "Judul aman", "tag & skrip dibuang dari judul");
   t.eq([fk.dateFromText("31 Februari 2026"), fk.dateFromText("9 Okt 2026"), fk.dateFromPath("/baca/2026/13/01/x")].join(","), ",2026-10-09,", "tanggal tidak sah ditolak");
   t.eq(fk.absolute("//fiskal.kemenkeu.go.id.evil.example/a"), null, "host menyerupai ditolak");
-  t.ok(readFileSync(SINGLE_OUT, "utf8") === buildSingle(), "index.single.ts (untuk Dashboard) sama dengan index.ts + parse.js terbaru — jalankan scripts/build-fetch-fiskal-single.mjs bila gagal");
+  t.ok(readFileSync(SINGLE_OUT, "utf8").replace(/\r\n/g, "\n") === buildSingle(), "index.single.ts (untuk Dashboard) sama dengan index.ts + parse.js terbaru — jalankan scripts/build-fetch-fiskal-single.mjs bila gagal");
 });
 
 process.exit(t.summary() ? 0 : 1);

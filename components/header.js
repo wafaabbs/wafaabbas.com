@@ -176,7 +176,7 @@ function shellHtml(tree) {
       </div>
       <nav class="drawer__nav" aria-label="Navigasi seluler"><ul class="drawer__list" data-drawer-list>${tree.map(drawerItem)}</ul></nav>
       <div class="drawer__foot">
-        <div class="drawer__tools">${readerToolsHtml()}${themeToggleHtml()}</div>
+        <div class="drawer__tools">${readerToolsHtml({ variant: "inline" })}${themeToggleHtml()}</div>
         <a class="btn btn--accent btn--block" href="${pathTo("contact.html")}">Hubungi Saya</a>
         <div class="drawer__social">${socialLinksHtml({ size: 20 })}</div>
       </div>

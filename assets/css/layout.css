@@ -57,10 +57,6 @@ html.has-ticker { --ticker-h: 38px; }
 .site-header__side .brand-btn--whatsapp:hover { background: #25d366; }
 
 /* alat baca & tema di atas latar terang */
-.site-header__top .seg { background: var(--surface-sunken); border-color: var(--line); }
-.site-header__top .seg__btn { color: var(--text-soft); }
-.site-header__top .seg__btn:hover { color: var(--text); }
-.site-header__top .seg__btn[aria-pressed="true"] { background: var(--accent-500); color: var(--ink-900); }
 .site-header__top .pill-btn { border-color: var(--line-strong); color: var(--text-soft); height: 32px; }
 .site-header__top .pill-btn:hover:not([disabled]) { border-color: var(--primary); color: var(--primary); }
 .site-header__top .theme-toggle { width: 40px; height: 40px; background: var(--surface-sunken); border-color: var(--line); color: var(--text-soft); }

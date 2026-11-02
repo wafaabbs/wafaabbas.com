@@ -38,7 +38,10 @@
 [data-theme="dark"] .btn--accent { background: var(--accent-500); color: #06141e; }
 [data-theme="dark"] .btn--outline { background: transparent; color: var(--text); border-color: var(--line-strong); }
 [data-theme="dark"] .btn--outline:hover { background: var(--accent-500); border-color: var(--accent-500); color: #06141e; }
-[data-theme="dark"] .btn--ghost { color: var(--text-soft); }
+/* ghost: aturan .btn di atas memberi latar hijau ke SEMUA tombol; ghost harus kembali transparan (sebelumnya teks terang di atas hijau, kontras 1:1) */
+[data-theme="dark"] .btn--ghost { background: transparent; color: var(--text-soft); border-color: var(--line-strong); }
+[data-theme="dark"] .btn--ghost:hover { background: var(--surface-sunken); color: var(--text); border-color: var(--text-muted); }
+[data-theme="dark"] .save-btn.is-saved, [data-theme="dark"] .save-btn.is-saved:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
 [data-theme="dark"] .btn--danger { background: #b42318; color: #fff; }
 [data-theme="dark"] .btn--outline-accent, [data-theme="dark"] .btn--outline-light { background: transparent; }
 [data-theme="dark"] .chip:hover { border-color: var(--accent-500); color: var(--text); }
