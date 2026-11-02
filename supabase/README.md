@@ -11,6 +11,7 @@ sebaiknya pertama di proyek **staging** (salinan proyek) lalu produksi.
 | `migrations/002_rls_admin_hardening.sql` | `public.wafa_is_admin()`; RLS pada 6 tabel; baca publik hanya konten terbit/aktif; tulis hanya admin; cabut `TRUNCATE`/`TRIGGER`/`REFERENCES`; kebijakan Storage `thumbnails`. Menolak berjalan bila belum ada admin. |
 | `migrations/003_external_news.sql` | "Kabar Fiskal": tabel `external_sources` (6 sumber awal) & `external_news` (tautan judul/tanggal/URL dari fiskal.kemenkeu.go.id). Publik baca tautan tampil dari sumber aktif; admin hanya menyalakan sumber & menyembunyikan/menghapus tautan (grant kolom); penulisan hanya oleh Edge Function. CHECK membatasi URL ke host sumber. Butuh 002. |
 | `migrations/004_article_search.sql` | Pencarian teks penuh artikel: kolom `articles.search_tsv` (dihitung otomatis dari judul > ringkasan > isi, kamus `indonesian` sehingga "perpajakan" cocok dengan "pajak"), indeks GIN, fungsi `search_articles()` (urutan relevansi, "frasa", -pengecualian, cuplikan). Hanya artikel terbit. Sebelum dijalankan, situs memakai pencarian judul + ringkasan. Butuh 002. |
+| `migrations/005_article_engagement.sql` | Suka & komentar artikel: `article_stats` (penghitung), `article_likes`, `article_comments` (balasan satu tingkat), `comment_likes`. Pembaca memakai sesi anonim Supabase; hanya bisa menulis/menghapus miliknya sendiri, penghitung dijaga trigger, maks. 5 komentar/menit, admin bertanda "Penulis" dan bisa menyembunyikan/menghapus. Butuh 002 + sesi anonim diizinkan (lihat bagian di bawah). |
 | `functions/fetch-fiskal/` | Edge Function pengambil tautan (`index.ts`) + pembaca HTML murni (`parse.js`, diuji di `tests/unit`). `index.single.ts` = gabungan keduanya untuk editor Dashboard (dibangkitkan oleh `scripts/build-fetch-fiskal-single.mjs`). |
 | `verify/00_snapshot.sql` | Read-only. Potret kebijakan & grant sebelum perubahan (dasar rollback). |
 | `verify/01_verify_after_002.sql` | Read-only. Simulasi anon / non-admin / admin dalam transaksi yang di-rollback. |
@@ -44,6 +45,31 @@ sebaiknya pertama di proyek **staging** (salinan proyek) lalu produksi.
 `tests/sql/db.test.mjs` menjalankan kedua migrasi pada Postgres sungguhan (PGlite/WASM) untuk id `bigint` dan `uuid`, dengan `auth.jwt()` dan `storage` ditiru:
 idempotensi, data tidak hilang, aturan trigger, constraint, RLS anon/non-admin/admin, klaim `user_metadata` palsu ditolak, kebijakan Storage, `TRUNCATE` dicabut.
 Ini **bukan** pengganti uji di proyek Supabase staging (versi Postgres, ekstensi, dan konfigurasi Storage/Auth sungguhan bisa berbeda).
+
+## Suka & komentar artikel (migrasi 005)
+
+Sebelum langkah ini dijalankan, artikel tampil seperti biasa tanpa bagian suka & komentar.
+
+1. **Izinkan sesi anonim**: Dashboard → **Authentication → Sign In / Providers → "Allow anonymous sign-ins" = ON**.
+   Pembaca tidak perlu daftar; sesi anonim dibuat hanya saat pertama kali menyukai/berkomentar (membaca tidak membuat sesi).
+   "Allow new users to sign up" boleh tetap **off** — sesi anonim diatur oleh sakelar terpisah.
+2. **Migrasi**: jalankan `migrations/005_article_engagement.sql` (staging dulu). Rollback: `rollback/005_down.sql` (menghapus semua suka & komentar).
+3. **Uji**: buka sebuah artikel → suka, tulis komentar, balas, hapus komentar sendiri. Lalu `/admin/comments.html` → sembunyikan & hapus.
+
+Anjuran tambahan (dashboard, bukan SQL):
+- **CAPTCHA** (Authentication → Attack Protection → Turnstile/hCaptcha) mengurangi bot pembuat sesi anonim. Bila diaktifkan,
+  pemanggilan `signInAnonymously` di `services/engagement.js` perlu diberi `options.captchaToken` dari widget CAPTCHA.
+- **Rate limit** "anonymous sign-ins" per jam (Authentication → Rate Limits) — bawaan Supabase 30/jam per IP.
+- Pengguna anonim menumpuk di `auth.users`. Bersihkan berkala yang tidak punya aktivitas, mis. lebih dari 30 hari:
+  ```sql
+  delete from auth.users u
+   where u.is_anonymous and u.created_at < now() - interval '30 days'
+     and not exists (select 1 from public.article_comments c where c.user_id = u.id);
+  ```
+  Suka dari pengguna yang dihapus tetap terhitung, karena `article_likes.user_id` tidak ber-FK ke `auth.users`.
+
+Batas di database: nama 1–40 karakter, komentar 1–1000 karakter, 5 komentar/menit per pengguna, komentar di artikel terbit saja,
+balasan untuk balasan ditempelkan ke komentar induknya. Pembaca tidak bisa mengubah isi komentar (hanya menghapus miliknya).
 
 ## Kabar Fiskal (migrasi 003 + Edge Function `fetch-fiskal`)
 

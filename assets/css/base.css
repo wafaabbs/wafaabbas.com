@@ -47,7 +47,7 @@ a:hover { color: var(--link-hover); }
 /* ---- fokus keyboard (selalu terlihat) ---- */
 :focus { outline: none; }
 :focus-visible { outline: 3px solid var(--accent-600); outline-offset: 2px; border-radius: 4px; }
-.on-dark :focus-visible, .site-header :focus-visible, .site-footer :focus-visible, .drawer :focus-visible { outline-color: var(--accent-500); }
+.site-header :focus-visible, .site-footer :focus-visible, .drawer :focus-visible { outline-color: var(--accent-500); }
 
 /* ---- utilitas aksesibilitas ---- */
 .visually-hidden {

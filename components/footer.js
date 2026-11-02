@@ -1,4 +1,4 @@
-// Footer bergaya portal: pita merek (logo, deskripsi, sosial), kolom tautan berjudul-titik, kontak, bilah bawah.
+// Footer ringkas: satu grid (merek + sosial, kolom tautan, kontak) dan bilah bawah tipis.
 // Menu footer dikelola terpisah dari menu header (lokasi 'footer' di CMS).
 // Bila menu footer CMS kosong/gagal, footer memakai tautan cadangan; informasi kontak berasal dari core/config.js.
 
@@ -38,8 +38,10 @@ const colHtml = (c) => html`
 const contactCol = () => html`
   <div class="site-footer__col site-footer__contact">
     <h2 class="site-footer__heading">Kontak</h2>
-    <a class="site-footer__contact-item" href="${"mailto:" + SITE.contact.email}">${icon("mail", { size: 18 })}<span><small>Email</small><strong>${SITE.contact.email}</strong></span></a>
-    <a class="site-footer__contact-item" href="${SITE.contact.whatsapp.url}" target="_blank" rel="noopener noreferrer">${icon("whatsapp", { size: 18 })}<span><small>WhatsApp</small><strong>${SITE.contact.whatsapp.label}</strong></span></a>
+    <ul class="site-footer__list">
+      <li><a class="site-footer__contact-item" href="${"mailto:" + SITE.contact.email}" aria-label="Email ${SITE.contact.email}">${icon("mail", { size: 15 })}<span>${SITE.contact.email}</span></a></li>
+      <li><a class="site-footer__contact-item" href="${SITE.contact.whatsapp.url}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp ${SITE.contact.whatsapp.label}">${icon("whatsapp", { size: 15 })}<span>${SITE.contact.whatsapp.label}</span></a></li>
+    </ul>
   </div>`;
 
 const STATIC_COL = {
@@ -51,24 +53,28 @@ const STATIC_COL = {
 function footerHtml(tree) {
   const cols = footerColumns(tree);
   return html`
-    <div class="container">
-      <div class="site-footer__band">
+    <div class="container site-footer__grid">
+      <div class="site-footer__brand">
         <a class="site-footer__logo" href="${pathTo("index.html")}" aria-label="${SITE.name} — beranda"><img src="${LOGO_WHITE()}" alt="${SITE.name}" width="250" height="36" loading="lazy"></a>
-        <p class="site-footer__desc">${SITE.description} Ditulis untuk pembaca yang ingin memahami aturan dan praktik akuntansi, perpajakan, serta keuangan dengan bahasa yang lugas.</p>
-        <div class="site-footer__social" role="group" aria-label="Media sosial">${socialLinksHtml({ size: 15 })}</div>
+        <p class="site-footer__desc">${SITE.description} Aturan dan praktiknya, dengan bahasa yang lugas.</p>
+        <div class="site-footer__social" role="group" aria-label="Media sosial">${socialLinksHtml({ size: 14 })}</div>
       </div>
-      <div class="site-footer__grid">
-        <nav class="site-footer__cols" aria-label="Navigasi footer" data-footer-cols>${cols.map(colHtml)}</nav>
-        ${colHtml(STATIC_COL)}
-        ${contactCol()}
-      </div>
+      <nav class="site-footer__cols" aria-label="Navigasi footer" data-footer-cols>${cols.map(colHtml)}</nav>
+      <div class="site-footer__static" data-footer-static>${colHtml(STATIC_COL)}</div>
+      ${contactCol()}
     </div>
-    <div class="site-footer__bar">
-      <div class="container site-footer__bar-inner">
-        <span>© ${new Date().getFullYear()} ${SITE.owner}. ${SITE.tagline}.</span>
-        <a href="#site-header">Kembali ke atas ${icon("arrowUp", { size: 14 })}</a>
-      </div>
+    <div class="container site-footer__bar">
+      <span>© ${new Date().getFullYear()} ${SITE.owner}<span class="site-footer__tagline">. ${SITE.tagline}.</span></span>
+      <a class="site-footer__top" href="#site-header"><span class="site-footer__top-long">Kembali ke atas</span><span class="site-footer__top-short" aria-hidden="true">Ke atas</span>${icon("arrowUp", { size: 13 })}</a>
     </div>`;
+}
+
+/** Tandai tautan "Situs" yang sudah ada di menu footer; di layar kecil (satu deret tautan) yang ganda disembunyikan. */
+function markDuplicates(root) {
+  const seen = new Set([...root.querySelectorAll("[data-footer-cols] a[href]")].map((a) => a.getAttribute("href")));
+  root.querySelectorAll("[data-footer-static] li").forEach((li) => {
+    li.classList.toggle("is-dup", seen.has(li.querySelector("a")?.getAttribute("href")));
+  });
 }
 
 /** Pasang footer pada <footer id="site-footer">. */
@@ -78,11 +84,13 @@ export async function mountFooter(rootId = "site-footer") {
   root.classList.add("site-footer");
   setHtml(root, footerHtml(fallbackTree("footer")));
   root.dataset.menuSource = "fallback";
+  markDuplicates(root);
   try {
     const { tree, source } = await getPublicTree("footer");
     if (tree.length) {
       const nav = root.querySelector("[data-footer-cols]");
       setHtml(nav, html`${footerColumns(tree).map(colHtml)}`);
+      markDuplicates(root);
       root.dataset.menuSource = source === "cache" ? "cache" : "cms";
     } else {
       root.dataset.menuSource = "fallback-empty";

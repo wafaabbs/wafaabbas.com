@@ -9,20 +9,21 @@ Situs edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas. HTML + CSS + 
 - **Peralatan** (`alat.html`) dengan **Kalkulator Pajak** (`kalkulator-pajak.html`; rumus di `core/tax.js`).
 - **Pencarian teks penuh** artikel (judul, ringkasan, isi; urutan relevansi; "frasa" & -pengecualian) lewat `search_articles` (migrasi 004), dengan cadangan judul + ringkasan.
 - **Kabar Fiskal** (`kabar-fiskal.html`): tautan otomatis dari fiskal.kemenkeu.go.id lewat Edge Function `supabase/functions/fetch-fiskal` (lihat `supabase/README.md`).
-- **Admin** (`/admin/`): ringkasan, artikel (editor markdown + pratinjau, unggah thumbnail, slot unggulan), kategori, **Menu Manager**, **Page Manager**, konten beranda (unggulan & banner).
+- **Suka & komentar artikel** bergaya Instagram (migrasi 005): suka artikel & komentar, balasan satu tingkat yang bisa dibuka/tutup dan dimuat bertahap, komentar panjang "selengkapnya", tanda "Penulis". Pembaca memakai sesi anonim Supabase (tanpa daftar). Moderasi di `/admin/comments.html`.
+- **Admin** (`/admin/`): ringkasan, artikel (editor markdown + pratinjau, unggah thumbnail, slot unggulan), kategori, **Menu Manager**, **Page Manager**, konten beranda (unggulan & banner), moderasi komentar.
 
 ## Struktur
 
 ```
 index.html article.html category.html page.html about.html contact.html alat.html kalkulator-pajak.html kabar-fiskal.html tools.html (alih ke alat.html) 404.html
-admin/                 login, dashboard, posts, editor, categories, menus, pages, home, external  (semua noindex)
+admin/                 login, dashboard, posts, editor, categories, menus, pages, home, external, comments  (semua noindex)
 assets/css/            tokens → base → layout → components → pages → theme-dark   (+ admin.css untuk panel)
 assets/fonts/          Plus Jakarta Sans & Newsreader (OFL, self-hosted)
 assets/icons/         logo merek asli (LinkedIn, Instagram, WhatsApp)
 assets/js/theme-init.js  skrip sinkron mode gelap/terang (anti-kedip)
 assets/images/        logo (SVG), favicon, apple-touch-icon, og-image, placeholder thumbnail
 core/                  config, dom (html`` auto-escape), url (allowlist tautan), format, markdown (aman), seo
-services/              akses Supabase per domain: client, auth, articles, categories, menus, pages, featured, banners, storage
+services/              akses Supabase per domain: client, auth, articles, categories, menus, pages, featured, banners, storage, engagement
 components/            header, footer, kartu artikel, pagination, breadcrumb, pencarian, TOC, editor markdown, ikon, state
 pages/                 pengendali per halaman publik;  pages/admin/ untuk panel
 supabase/              migrasi SQL, Edge Function fetch-fiskal, verifikasi, rollback (BELUM dijalankan di database mana pun) — baca supabase/README.md

@@ -1,4 +1,5 @@
-// Detail artikel (article.html?slug=...): judul, meta, isi markdown aman, daftar isi, simpan, bagikan, artikel terkait.
+// Detail artikel (article.html?slug=...): judul, meta, isi markdown aman, daftar isi, simpan, bagikan, suka & komentar,
+// artikel terkait.
 
 import { html, raw } from "../core/dom.js";
 import { SITE } from "../core/config.js";
@@ -15,6 +16,7 @@ import { emptyState, errorState } from "../components/states.js";
 import { icon } from "../components/icons.js";
 import { shareHtml, bindShare } from "../components/share.js";
 import { saveButtonHtml, bindSaveButtons } from "../components/saved.js";
+import { likeBarHtml, commentsSectionHtml, mountEngagement } from "../components/comments.js";
 import { bootChrome, render } from "./boot.js";
 
 bootChrome();
@@ -82,8 +84,11 @@ async function load() {
       <div class="article__layout">
         <div class="article__body">
           <div class="prose" id="article-content">${raw(bodyHtml)}</div>
-          <div class="article__foot"><div class="share" role="group" aria-label="Simpan atau bagikan artikel"><span class="share__label">Suka tulisan ini?</span>${saveButtonHtml(article)}${shareHtml(article.title)}</div>
-            <a class="btn btn--outline btn--sm" href="${pathTo("article.html")}">← Semua artikel</a></div>
+          <div class="article__foot">
+            <div class="article__foot-row">${likeBarHtml()}<div class="share" role="group" aria-label="Simpan atau bagikan artikel">${saveButtonHtml(article)}${shareHtml(article.title)}</div></div>
+          </div>
+          ${commentsSectionHtml()}
+          <a class="btn btn--outline btn--sm article__back" href="${pathTo("article.html")}">← Semua artikel</a>
         </div>
         ${toc ? html`<aside class="article__aside" aria-label="Daftar isi">${toc}</aside>` : ""}
       </div>
@@ -100,6 +105,7 @@ async function load() {
 
   bindShare(article.title);
   bindSaveButtons((s) => (s === article.slug ? article : null));
+  mountEngagement(root, article);                       // suka & komentar: tidak menunda/menggagalkan artikel
 
   // Artikel terkait (tidak boleh menggagalkan artikel).
   try {

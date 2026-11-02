@@ -1,4 +1,4 @@
-// Alat baca: ukuran teks (6 tingkat lewat penggeser di panel kecil "Aa") dan bahasa (ID/EN via Google Translate bila
+// Alat baca: ukuran teks (6 tingkat lewat penggeser di panel pengaturan / drawer) dan bahasa (ID/EN via Google Translate bila
 // pembaca memilih EN). Preferensi disimpan di localStorage (dibungkus try/catch: boleh gagal tanpa merusak halaman).
 // Tingkat ukuran dipasang lebih awal oleh assets/js/theme-init.js agar tidak berkedip; persentasenya di tokens.css.
 
@@ -38,7 +38,6 @@ export function applyFontSize(level = getFontSize()) {
   document.querySelectorAll('[data-fs-step="-1"]').forEach((b) => { b.disabled = level <= 0; });
   document.querySelectorAll('[data-fs-step="1"]').forEach((b) => { b.disabled = level >= FONT_LEVELS.length - 1; });
   document.querySelectorAll("[data-fs-reset]").forEach((b) => { b.hidden = level === FONT_DEFAULT; });
-  document.querySelectorAll("[data-fs-toggle]").forEach((b) => { b.setAttribute("aria-label", `Ukuran teks: ${valueText(level)}`); });
 }
 
 function setFont(level) {
@@ -84,7 +83,6 @@ function toggleLang() {
 }
 
 // ---------------------------------------------------------------- UI
-let seq = 0;
 function fontControl() {
   const level = getFontSize();
   return html`
@@ -97,29 +95,18 @@ function fontControl() {
     <button type="button" class="fs__reset" data-fs-reset ${level === FONT_DEFAULT ? "hidden" : ""}>↺ Kembalikan ke standar (${FONT_LEVELS[FONT_DEFAULT]}%)</button>`;
 }
 
-/**
- * Markup alat baca. variant "popover" (header): tombol "Aa" + panel; "inline" (drawer): penggeser langsung tampil.
- * Event diikat oleh bindReaderTools().
- */
-export function readerToolsHtml({ variant = "popover" } = {}) {
+/** Sakelar bahasa ID/EN (tombol pil); dipakai juga terpisah di panel pengaturan header. */
+export function langToggleHtml() {
   const en = getLang() === TARGET_LANG;
-  const id = `fs-pop-${++seq}`;
-  const lang = html`<button type="button" class="pill-btn" data-lang-toggle aria-label="${en ? "Ganti ke Bahasa Indonesia" : "Switch to English"}">${en ? "ID" : "EN"}</button>`;
-  if (variant === "inline") return html`<div class="fs fs--inline" role="group" aria-label="Ukuran teks">${fontControl()}</div>${lang}`;
-  return html`
-    <div class="fs" data-fs>
-      <button type="button" class="fs__toggle" data-fs-toggle aria-expanded="false" aria-controls="${id}" aria-label="Ukuran teks: ${valueText(getFontSize())}" title="Ukuran teks"><span aria-hidden="true">A<small>A</small></span></button>
-      <div class="fs__pop" id="${id}" role="group" aria-label="Ukuran teks" hidden>${fontControl()}</div>
-    </div>
-    ${lang}`;
+  return html`<button type="button" class="pill-btn" data-lang-toggle aria-label="${en ? "Ganti ke Bahasa Indonesia" : "Switch to English"}">${en ? "ID" : "EN"}</button>`;
 }
 
-function closePops(except) {
-  document.querySelectorAll("[data-fs] .fs__pop:not([hidden])").forEach((p) => {
-    if (p === except) return;
-    p.hidden = true;
-    p.closest("[data-fs]").querySelector("[data-fs-toggle]")?.setAttribute("aria-expanded", "false");
-  });
+/**
+ * Penggeser ukuran teks. variant "panel" (panel pengaturan header, latar terang) atau "inline" (drawer, latar navy).
+ * Event diikat oleh bindReaderTools().
+ */
+export function readerToolsHtml({ variant = "panel" } = {}) {
+  return html`<div class="fs fs--${variant}" role="group" aria-label="Ukuran teks">${fontControl()}</div>`;
 }
 
 let bound = false;
@@ -129,30 +116,12 @@ export function bindReaderTools() {
   if (bound) return;
   bound = true;
   document.addEventListener("click", (e) => {
-    const tog = e.target.closest("[data-fs-toggle]");
-    if (tog) {
-      const pop = tog.closest("[data-fs]").querySelector(".fs__pop");
-      const open = pop.hidden;
-      closePops(pop);
-      pop.hidden = !open;
-      tog.setAttribute("aria-expanded", String(open));
-      if (open) pop.querySelector("[data-fs-range]")?.focus();
-      return;
-    }
     const step = e.target.closest("[data-fs-step]");
     if (step) { setFont(getFontSize() + Number(step.dataset.fsStep)); return; }
     if (e.target.closest("[data-fs-reset]")) { setFont(FONT_DEFAULT); return; }
-    if (e.target.closest("[data-lang-toggle]")) { toggleLang(); return; }
-    if (!e.target.closest("[data-fs]")) closePops();
+    if (e.target.closest("[data-lang-toggle]")) toggleLang();
   });
   document.addEventListener("input", (e) => { if (e.target.matches("[data-fs-range]")) setFont(e.target.value); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    const open = document.querySelector("[data-fs] .fs__pop:not([hidden])");
-    if (!open) return;
-    closePops();
-    open.closest("[data-fs]").querySelector("[data-fs-toggle]")?.focus();
-  });
   syncCookie();
   if (getLang() === TARGET_LANG) loadTranslateWidget();
 }

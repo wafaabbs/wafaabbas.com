@@ -1,6 +1,6 @@
 // Uji e2e halaman publik (lokal, data palsu): menu dari CMS, beranda, daftar, detail, kategori, halaman CMS,
 // kebocoran draft, XSS, regresi URL lama, 404, galat jaringan.
-import { startServer, launch, suite, loadSdkSource, REPO } from "./harness.mjs";
+import { startServer, launch, suite, loadSdkSource } from "./harness.mjs";
 import { makeDb, seed } from "./fixtures.mjs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -154,8 +154,7 @@ try {
     t.eq(await b.eval(`document.querySelectorAll('.tool-card').length`), 4, "4 kartu peralatan");
     t.ok(await b.eval(`!!document.querySelector('.tool-card--live a[href$="kalkulator-pajak.html"]')`), "kartu Kalkulator Pajak menaut ke halaman kalkulator");
     await b.open("/tools.html", { seed: seed() });
-    await b.waitFor(`location.pathname.endsWith('/alat.html')`);
-    t.ok(await b.eval(`document.querySelectorAll('.tool-card').length === 4`), "alamat lama tools.html dialihkan ke alat.html");
+    t.ok(await b.waitFor(`location.pathname.endsWith('/alat.html') && document.querySelectorAll('.tool-card').length === 4`, 10000).catch(() => false), "alamat lama tools.html dialihkan ke alat.html");
     t.ok((await b.eval(`document.body.innerText`)).includes("Segera hadir"), "status segera hadir (tidak berpura-pura aktif)");
     await b.open("/about", { seed: seed() });
     t.ok(await b.eval(`document.title.includes('Tentang')`), "URL /about tanpa ekstensi berjalan");
@@ -217,7 +216,7 @@ try {
         await b.settle(450);
         const m = await b.eval(`({sw: document.documentElement.scrollWidth, hdr: document.getElementById('site-header').getBoundingClientRect().height, logo: document.querySelector('#site-header img').getBoundingClientRect().width})`);
         t.ok(m.sw <= w + 1, `${w}x${h} ${p}: tanpa overflow (scrollWidth ${m.sw})`);
-        t.ok(m.logo >= 140 && m.logo <= 200, `${w}x${h} ${p}: logo ${Math.round(m.logo)}px dalam 140–200`);
+        t.ok(m.logo >= 120 && m.logo <= 160, `${w}x${h} ${p}: logo ${Math.round(m.logo)}px dalam 120–160`);
         t.ok(m.hdr <= (w >= 960 ? 165 : 150), `${w}x${h} ${p}: tinggi header ${Math.round(m.hdr)}px ringkas`);
       }
     }
@@ -293,26 +292,28 @@ try {
     t.ok(contrast >= 7, `kontras teks utama mode gelap ${contrast.toFixed(1)}:1 (>= 7)`);
     await b.click(`.site-header__actions [data-theme-toggle]`);
     t.eq(await b.eval(`document.documentElement.dataset.theme`), "light", "klik lagi -> terang");
-    // ukuran teks: 6 tingkat (0..5 = 76/81/87/93/100/112%), standar 2 (87%), tombol "Aa" + panel penggeser
+    // ukuran teks: 6 tingkat (0..5 = 76/81/87/93/100/112%), standar 2 (87%), penggeser di panel pengaturan
     const rootPx = () => b.eval(`parseFloat(getComputedStyle(document.documentElement).fontSize)`);
     t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "2", "ukuran standar = tingkat 2");
     t.ok(Math.abs((await rootPx()) - 16 * 0.87) < 0.2, "tingkat 2 = 87% (≈13,9px)");
-    t.eq(await b.eval(`document.querySelectorAll('.site-header__tools [data-fs-toggle]').length`), 1, "satu tombol \"Aa\", bukan deretan tombol");
-    t.ok(await b.eval(`document.querySelector('.site-header__tools .fs__pop').hidden`), "panel tertutup secara bawaan");
-    await b.click(`.site-header__tools [data-fs-toggle]`);
-    t.ok(await b.eval(`!document.querySelector('.site-header__tools .fs__pop').hidden && document.activeElement.matches('[data-fs-range]')`), "panel terbuka, fokus ke penggeser");
-    await b.click(`.site-header__tools [data-fs-step="1"]`);
+    t.eq(await b.eval(`document.querySelectorAll('.site-header__actions > *:not([hidden])').length <= 3 && document.querySelectorAll('.site-header__actions [data-prefs-toggle]').length`), 1, "bilah atas ringkas: satu tombol pengaturan");
+    t.ok(await b.eval(`getComputedStyle(document.querySelector('.prefs__pop')).visibility === 'hidden'`), "panel pengaturan tertutup secara bawaan");
+    await b.click(`[data-prefs-toggle]`);
+    await b.settle(300);
+    t.ok(await b.eval(`getComputedStyle(document.querySelector('.prefs__pop')).visibility === 'visible' && document.querySelector('[data-prefs-toggle]').getAttribute('aria-expanded') === 'true'`), "panel pengaturan terbuka");
+    await b.click(`.prefs [data-fs-step="1"]`);
     t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "3", "tombol A+ -> tingkat 3 (93%)");
-    t.eq(await b.eval(`document.querySelector('.site-header__tools [data-fs-value]').textContent`), "93%", "persen tampil");
-    await b.eval(`(()=>{const r=document.querySelector('.site-header__tools [data-fs-range]');r.value='5';r.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+    t.eq(await b.eval(`document.querySelector('.prefs [data-fs-value]').textContent`), "93%", "persen tampil");
+    t.ok(await b.eval(`document.querySelector('.prefs').classList.contains('is-open')`), "panel tetap terbuka saat mengatur ukuran");
+    await b.eval(`(()=>{const r=document.querySelector('.prefs [data-fs-range]');r.value='5';r.dispatchEvent(new Event('input',{bubbles:true}))})()`);
     t.ok((await b.eval(`document.documentElement.dataset.fontSize`)) === "5" && Math.abs((await rootPx()) - 16 * 1.12) < 0.2, "penggeser -> tingkat 5 (112%)");
-    t.ok(await b.eval(`document.querySelector('.site-header__tools [data-fs-step="1"]').disabled && !document.querySelector('.site-header__tools [data-fs-reset]').hidden`), "batas atas: A+ nonaktif, tombol kembali ke standar muncul");
+    t.ok(await b.eval(`document.querySelector('.prefs [data-fs-step="1"]').disabled && !document.querySelector('.prefs [data-fs-reset]').hidden`), "batas atas: A+ nonaktif, tombol kembali ke standar muncul");
     await b.key("Escape");
-    t.ok(await b.eval(`document.querySelector('.site-header__tools .fs__pop').hidden`), "Esc menutup panel");
+    t.ok(await b.eval(`!document.querySelector('.prefs').classList.contains('is-open')`), "Esc menutup panel");
     await b.open("/about.html", { seed: "", clearStorage: false });
     t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "5", "ukuran teks tersimpan antar-halaman (dipasang sebelum render)");
-    await b.click(`.site-header__tools [data-fs-toggle]`);
-    await b.click(`.site-header__tools [data-fs-reset]`);
+    await b.click(`[data-prefs-toggle]`);
+    await b.click(`.prefs [data-fs-reset]`);
     t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "2", "kembali ke standar");
     await b.open("/about.html", { seed: "localStorage.setItem('wafa_font_size','md');", clearStorage: true });
     t.eq(await b.eval(`document.documentElement.dataset.fontSize`), "4", "pilihan lama 'md' (100%) dipetakan ke tingkat 4 (100%)");
@@ -326,11 +327,142 @@ try {
     // logo merek asli
     t.eq(await b.eval(`document.querySelectorAll('#site-header .site-header__side .brand-icon').length`), 3, "3 logo merek (LinkedIn, Instagram, WhatsApp) di header");
     t.ok(await b.eval(`[...document.querySelectorAll('.brand-icon')].every(e=>getComputedStyle(e).maskImage.includes('/assets/icons/') || getComputedStyle(e).webkitMaskImage.includes('/assets/icons/'))`), "logo memakai berkas di assets/icons/");
-    t.ok(await b.eval(`[...document.querySelectorAll('#site-header .brand-btn')].every(a=>a.getAttribute('aria-label')&&a.getBoundingClientRect().width>=34)`), "tombol sosial berlabel & area sentuh >= 34px");
-    // mobile: tombol tema di bilah atas (tanpa membuka drawer)
+    t.ok(await b.eval(`[...document.querySelectorAll('#site-header .brand-btn')].every(a=>a.getAttribute('aria-label')&&a.offsetWidth>=34)`), "tombol sosial berlabel & area sentuh >= 34px");
+    // mobile: bilah atas ringkas (tanpa tombol pengaturan); tema, bahasa, ukuran teks & sosial ada di drawer
     await b.open("/index.html", { seed: seed(), width: 390, height: 844, mobile: true });
-    await b.waitFor(`document.querySelector('.site-header__actions [data-theme-toggle]')`);
-    t.ok(await b.eval(`(()=>{const r=document.querySelector('.site-header__actions [data-theme-toggle]').getBoundingClientRect();return r.width>=40&&r.height>=40&&r.top<80})()`), "mobile: tombol tema di bilah atas, area sentuh memadai");
+    await b.waitFor(`document.querySelector('[data-drawer-open]')`);
+    t.ok(await b.eval(`getComputedStyle(document.querySelector('.prefs')).display === 'none'`), "mobile: tombol pengaturan disembunyikan di bilah atas");
+    await b.click(`[data-drawer-open]`);
+    await b.settle(500);
+    t.ok(await b.eval(`(()=>{const d=document.querySelector('#site-drawer');const ok=(s)=>{const r=d.querySelector(s)?.getBoundingClientRect();return r&&r.width>=40&&r.height>=40&&r.right<=innerWidth};return ok('[data-theme-toggle]')&&ok('[data-lang-toggle]')&&d.querySelectorAll('.brand-btn').length===3&&!!d.querySelector('[data-fs-range]')})()`), "mobile: drawer berisi tema, bahasa, ukuran teks & sosial (area sentuh >= 40px)");
+    await b.click(`[data-drawer-close]`);
+  });
+
+  await t.section("Artikel: suka & komentar (gaya Instagram)", async () => {
+    const engageDb = () => {
+      const db = makeDb();
+      const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+      const c = (id, parent, user, name, body, min, extra = {}) => ({ id, article_id: 1, parent_id: parent, user_id: user, author_name: name, body,
+        is_author: false, is_hidden: false, like_count: 0, reply_count: 0, created_at: ago(min), ...extra });
+      db.article_comments = [
+        c(1, null, "r1", "Budi", "Penjelasan yang jelas, terima kasih!", 600, { like_count: 2 }),
+        c(2, 1, "r2", "Sinta Dewi", "Setuju!", 590), c(3, 1, "r3", "Andi", "Mantap", 580), c(4, 1, "r4", "Rina", "Membantu", 570),
+        c(5, 1, "r5", "Dodi", "Sip", 560), c(6, 1, "u1", "Wafa", "Terima kasih semuanya", 550, { is_author: true }),
+        c(7, null, "r6", "Panjang", "Paragraf panjang. ".repeat(60), 300),
+        c(8, null, "r7", "Disembunyikan", "KOMENTAR TERSEMBUNYI", 200, { is_hidden: true }),
+        c(9, null, "r8", "Iseng", "<img src=x onerror=window.__pwned=1>", 100),
+      ];
+      db.article_stats = [{ article_id: 1, like_count: 4, comment_count: 8 }];
+      return db;
+    };
+    const open = async (extra = "") => {
+      await b.open("/article.html?slug=artikel-1", { seed: seed({ db: engageDb(), extra }), width: 1280, height: 900 });
+      await b.waitFor(`document.querySelector('[data-comments]') && !document.querySelector('[data-comments]').hidden`);
+    };
+    await open();
+    const txt = (s) => b.eval(`(document.querySelector(${JSON.stringify(s)})||{}).textContent`);
+    t.eq(await txt("[data-like-count]"), "4", "jumlah suka artikel tampil");
+    t.eq(await txt("[data-comment-count]"), "8", "jumlah komentar = komentar tampil (tersembunyi tidak dihitung)");
+    t.ok(!(await b.eval(`document.querySelector('[data-comments]').innerText`)).includes("KOMENTAR TERSEMBUNYI"), "komentar tersembunyi tidak tampil");
+    t.eq(await b.eval(`[...document.querySelectorAll('[data-cmt-list] > .cmt')].map(li=>li.dataset.cid)`), ["9", "7", "1"], "komentar induk terbaru di atas");
+    t.eq(await b.eval(`window.__pwned`), 0, "XSS di komentar tidak tereksekusi");
+    t.ok((await txt(`[data-cid="9"] .cmt__body`)).includes("<img"), "HTML di komentar tampil sebagai teks");
+
+    // utas balasan
+    t.eq((await txt(`[data-thread="1"]`)).trim(), "Lihat 5 balasan", "utas tertutup: \"Lihat 5 balasan\"");
+    t.ok(await b.eval(`getComputedStyle(document.querySelector('[data-thread-of="1"] .cmt__replies')).visibility === 'hidden'`), "balasan tersembunyi secara bawaan");
+    await b.click(`[data-thread="1"]`);
+    await b.settle(450);
+    t.ok(await b.eval(`document.querySelector('[data-thread-of="1"]').classList.contains('is-open') && getComputedStyle(document.querySelector('[data-thread-of="1"] .cmt__replies')).visibility === 'visible'`), "klik -> utas terbuka");
+    t.eq((await txt(`[data-thread="1"]`)).trim(), "Sembunyikan balasan", "label berubah jadi \"Sembunyikan balasan\"");
+    t.eq(await b.eval(`document.querySelectorAll('[data-thread-of="1"] .cmt--reply').length`), 3, "3 balasan pertama tampil");
+    t.ok((await txt(`[data-more-replies="1"]`)).includes("Lihat 2 balasan lainnya"), "\"Lihat 2 balasan lainnya\"");
+    await b.click(`[data-more-replies="1"]`);
+    t.eq(await b.eval(`document.querySelectorAll('[data-thread-of="1"] .cmt--reply').length`), 5, "semua balasan tampil");
+    t.ok(await b.eval(`!document.querySelector('[data-more-replies="1"]')`), "tombol \"lainnya\" hilang setelah semua tampil");
+    t.ok(await b.eval(`!!document.querySelector('[data-cid="6"] .cmt__badge') && !!document.querySelector('[data-cid="6"] .avatar--author')`), "komentar penulis bertanda");
+    await b.click(`[data-thread="1"]`);
+    t.ok(await b.eval(`!document.querySelector('[data-thread-of="1"]').classList.contains('is-open') && document.querySelector('[data-thread="1"]').getAttribute('aria-expanded') === 'false'`), "klik lagi -> utas tertutup");
+
+    // komentar panjang
+    t.ok(await b.eval(`!document.querySelector('[data-cid="7"] [data-expand]').hidden && document.querySelector('[data-cid="1"] > .cmt__main > [data-expand]').hidden`), "komentar panjang dipotong (\"selengkapnya\"), komentar pendek tidak");
+    await b.click(`[data-cid="7"] [data-expand]`);
+    t.ok(await b.eval(`document.querySelector('[data-cid="7"] [data-clamp]').classList.contains('is-expanded')`) && (await txt(`[data-cid="7"] [data-expand]`)) === "lebih sedikit", "\"selengkapnya\" membuka penuh, lalu \"lebih sedikit\"");
+
+    // suka artikel (sesi anonim dibuat saat dibutuhkan)
+    t.eq(await b.eval(`window.__ANON_SIGNINS || 0`), 0, "membaca komentar tidak membuat sesi");
+    await b.click(`[data-like]`);
+    await b.settle(150);
+    t.ok((await txt("[data-like-count]")) === "5" && (await b.eval(`document.querySelector('[data-like]').getAttribute('aria-pressed')`)) === "true", "klik suka -> 5, aria-pressed true");
+    t.ok(await b.eval(`window.__ANON_SIGNINS === 1 && window.__DB.article_likes.length === 1`), "sesi anonim dibuat sekali & suka tersimpan");
+    await b.click(`[data-like]`);
+    await b.settle(150);
+    t.ok((await txt("[data-like-count]")) === "4" && (await b.eval(`window.__DB.article_likes.length`)) === 0, "klik lagi -> batal suka");
+
+    // suka komentar
+    await b.click(`[data-clike="9"]`);
+    await b.settle(150);
+    t.ok(await b.eval(`document.querySelector('[data-clike="9"]').classList.contains('is-liked')`) && (await txt(`[data-cid="9"] [data-clc]`)) === "1 suka", "suka komentar -> \"1 suka\"");
+
+    // kirim komentar
+    t.ok(await b.eval(`document.querySelector('.cmts__send').disabled`), "tombol kirim nonaktif saat kosong");
+    await b.type(`#cmt-name`, "Sari");
+    await b.type(`#cmt-body`, "Komentar baru dari Sari");
+    t.ok(await b.eval(`!document.querySelector('.cmts__send').disabled`), "tombol kirim aktif setelah nama & isi diisi");
+    await b.click(`.cmts__send`);
+    await b.waitFor(`document.querySelector('[data-cmt-list] > .cmt')?.textContent.includes('Komentar baru dari Sari')`);
+    t.ok(true, "komentar baru tampil paling atas");
+    t.eq(await txt("[data-comment-count]"), "9", "jumlah komentar bertambah");
+    t.ok(await b.eval(`localStorage.getItem('wafa_comment_name') === 'Sari' && document.querySelector('[data-name-row]').hidden && document.querySelector('[data-as-name]').textContent === 'Sari'`), "nama diingat: \"Berkomentar sebagai Sari\"");
+    t.ok(await b.eval(`document.querySelector('#cmt-body').value === ''`), "kotak komentar dikosongkan");
+    const mine = await b.eval(`document.querySelector('[data-cmt-list] > .cmt').dataset.cid`);
+    t.ok(await b.eval(`!!document.querySelector('[data-del="${mine}"]') && !document.querySelector('[data-del="9"]')`), "tombol Hapus hanya pada komentar sendiri");
+
+    // balas sebuah balasan -> menempel ke komentar induk, @nama disorot
+    await b.click(`[data-thread="1"]`);
+    await b.click(`[data-reply="2"]`);
+    t.ok(await b.eval(`!document.querySelector('[data-replying]').hidden && document.querySelector('#cmt-body').value.startsWith('@Sinta Dewi ')`), "Balas -> \"Membalas @Sinta Dewi\" + @nama terisi");
+    await b.eval(`(()=>{const e=document.querySelector('#cmt-body');e.value+='betul sekali';e.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+    await b.click(`.cmts__send`);
+    await b.waitFor(`[...document.querySelectorAll('[data-thread-of="1"] .cmt--reply')].some(li=>li.textContent.includes('betul sekali'))`);
+    const reply = await b.eval(`window.__DB.article_comments.find(c=>c.body.includes('betul sekali'))`);
+    t.eq(String(reply.parent_id), "1", "balasan untuk balasan disimpan di bawah komentar induk");
+    t.ok(await b.eval(`document.querySelector('[data-thread-of="1"]').classList.contains('is-open') && [...document.querySelectorAll('[data-thread-of="1"] .cmt__mention')].some(m=>m.textContent==='@Sinta Dewi')`), "utas terbuka & @Sinta Dewi disorot");
+    t.ok(await b.eval(`document.querySelector('[data-replying]').hidden`), "mode balas selesai setelah terkirim");
+
+    // hapus komentar sendiri (dua ketukan)
+    await b.click(`[data-del="${mine}"]`);
+    t.eq(await txt(`[data-del="${mine}"]`), "Yakin hapus?", "ketukan pertama meminta konfirmasi");
+    await b.click(`[data-del="${mine}"]`);
+    await b.waitFor(`!document.querySelector('[data-cid="${mine}"]')`);
+    t.ok(await b.eval(`!window.__DB.article_comments.some(c=>String(c.id)==='${mine}')`), "ketukan kedua menghapus komentar");
+    t.eq(b.state.errors.length, 0, "tanpa error konsol", b.state.errors.join(" | "));
+    if (SHOTS) await b.screenshot(path.join(SHOTS, "article-comments.png"));
+
+    // tautan langsung ke balasan: utas terbuka & komentar terlihat
+    await b.open("/article.html?slug=artikel-1#komentar-5", { seed: seed({ db: engageDb() }), width: 1280, height: 900 });
+    await b.waitFor(`document.querySelector('[data-cid="5"]')`);
+    await b.settle(900);
+    t.ok(await b.eval(`document.querySelector('[data-thread-of="1"]').classList.contains('is-open') && (()=>{const r=document.querySelector('[data-cid="5"]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()`), "#komentar-ID membuka utas & menggulir ke balasan");
+
+    // mobile: tanpa scroll horizontal
+    await b.open("/article.html?slug=artikel-1", { seed: seed({ db: engageDb() }), width: 360, height: 800, mobile: true });
+    await b.waitFor(`document.querySelector('[data-comments]') && !document.querySelector('[data-comments]').hidden`);
+    await b.click(`[data-thread="1"]`);
+    await b.settle(450);
+    t.ok(await b.eval(`document.documentElement.scrollWidth <= window.innerWidth + 1`), "mobile 360px: komentar tanpa scroll horizontal");
+
+    // sesi anonim belum diizinkan di dashboard -> pesan jelas, angka dikembalikan
+    await open("window.__ANON_DISABLED=true;");
+    await b.click(`[data-like]`);
+    await b.waitFor(`!document.querySelector('[data-cmt-error]').hidden`);
+    t.ok((await txt("[data-cmt-error]")).includes("belum diaktifkan") && (await txt("[data-like-count]")) === "4", "sesi anonim mati: pesan \"belum diaktifkan\" & suka dikembalikan");
+
+    // migrasi 005 belum dijalankan -> bagian tidak tampil, artikel tetap utuh
+    await b.open("/article.html?slug=artikel-1", { seed: seed({ extra: "window.__MISSING_TABLES=['article_stats','article_comments','article_likes','comment_likes'];" }) });
+    await b.waitFor(`document.querySelector('#article-content')`);
+    await b.settle(300);
+    t.ok(await b.eval(`document.querySelector('[data-comments]').hidden && document.querySelector('[data-engage]').hidden && !!document.querySelector('#article-content').textContent.trim()`), "tanpa migrasi 005: suka & komentar disembunyikan, artikel utuh");
   });
 
   await t.section("Mobile: drawer, tanpa overflow horizontal", async () => {

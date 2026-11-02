@@ -44,8 +44,10 @@ function baseline(idType) {
     raw_user_meta_data jsonb not null default '{}', email_confirmed_at timestamptz, last_sign_in_at timestamptz, created_at timestamptz default now());
   create function auth.jwt() returns jsonb language sql stable as
     $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
+  create function auth.uid() returns uuid language sql stable as
+    $$ select nullif(auth.jwt() ->> 'sub', '')::uuid $$;
   grant usage on schema auth to anon, authenticated;
-  grant execute on function auth.jwt() to anon, authenticated;
+  grant execute on function auth.jwt(), auth.uid() to anon, authenticated;
 
   create schema storage;
   create table storage.buckets (id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
@@ -340,6 +342,117 @@ async function suite(PGlite, idType) {
   check(`[${idType}] filter kategori`, hits.length === 0);
   r = await as(db, "anon", {}, `select * from public.search_articles($1)`, ["'); drop table public.articles; --"]);
   check(`[${idType}] masukan berbahaya aman (tanpa galat, tabel utuh)`, !r.error && (await count(db, "postgres", {}, "articles")) > 0, JSON.stringify(r.error));
+
+  // ---- 005: suka & komentar ----
+  e = await (async () => { const d = new PGlite(); await d.exec(baseline(idType)); await d.exec(SEED); await d.exec(MIG("001_menus_hierarchy_and_pages.sql"));
+    const x = await d.exec(MIG("005_article_engagement.sql")).then(() => null, (y) => y); await d.close(); return x; })();
+  check(`[${idType}] 005 menolak jalan sebelum 002`, e && /002/.test(e.message), e && e.message);
+  await db.exec(MIG("005_article_engagement.sql"));
+  await db.exec(MIG("005_article_engagement.sql"));                      // idempoten
+  check(`[${idType}] 005 idempoten`, true);
+  const art = (await db.query(`select id from public.articles where slug = 'ter-karyawan'`)).rows[0].id;
+  const draft = (await db.query(`select id from public.articles where slug = 'draf-pajak'`)).rows[0].id;
+  const R1 = { sub: "00000000-0000-0000-0000-0000000000c3", role: "authenticated", is_anonymous: true, app_metadata: { provider: "anonymous" } };
+  const R2 = { sub: "00000000-0000-0000-0000-0000000000d4", role: "authenticated", is_anonymous: true, app_metadata: { provider: "anonymous" } };
+  const addC = (claims, body, parent = null, a = art, spoof = null) => spoof
+    ? as(db, "authenticated", claims, `insert into public.article_comments (article_id, parent_id, author_name, body, user_id) values ($1, $2, '  Budi   Santoso ', $3, $4) returning id, parent_id, user_id, author_name, is_author, is_hidden`, [a, parent, body, spoof])
+    : as(db, "authenticated", claims, `insert into public.article_comments (article_id, parent_id, author_name, body) values ($1, $2, '  Budi   Santoso ', $3) returning id, parent_id, user_id, author_name, is_author, is_hidden`, [a, parent, body]);
+  const stats = async () => (await db.query(`select like_count, comment_count from public.article_stats where article_id = $1`, [art])).rows[0] || { like_count: 0, comment_count: 0 };
+
+  r = await as(db, "anon", {}, `insert into public.article_comments (article_id, author_name, body) values ($1, 'x', 'y')`, [art]);
+  check(`[${idType}] anon (tanpa sesi) tidak bisa berkomentar`, r.error === "42501", JSON.stringify(r));
+  r = await addC(R1, "Komentar pertama", null, art, R2.sub);
+  check(`[${idType}] komentar pembaca anonim tersimpan; user_id dipaksa = auth.uid() (pemalsuan diabaikan)`, r.rows?.[0]?.user_id === R1.sub, JSON.stringify(r));
+  check(`[${idType}] nama dirapikan, bukan penulis, tampil`, r.rows?.[0]?.author_name === "Budi Santoso" && r.rows[0].is_author === false && r.rows[0].is_hidden === false);
+  const c1 = r.rows?.[0]?.id;
+  r = await addC(R1, "x", null, draft);
+  check(`[${idType}] komentar di artikel draf ditolak`, !!r.error, JSON.stringify(r));
+  r = await addC(R1, "y".repeat(1001));
+  check(`[${idType}] komentar > 1000 karakter ditolak`, r.error === "23514", JSON.stringify(r).slice(0, 120));
+  r = await addC(R1, "   ");
+  check(`[${idType}] komentar kosong ditolak`, r.error === "23514", JSON.stringify(r).slice(0, 120));
+  r = await addC(R2, "Balasan", c1);
+  const c2 = r.rows?.[0]?.id;
+  check(`[${idType}] balasan tersimpan di bawah komentar induk`, String(r.rows?.[0]?.parent_id) === String(c1), JSON.stringify(r));
+  r = await addC(R1, "Balasan untuk balasan", c2);
+  check(`[${idType}] balasan untuk balasan ditempelkan ke komentar induk (satu tingkat)`, String(r.rows?.[0]?.parent_id) === String(c1), JSON.stringify(r));
+  r = await db.query(`select reply_count from public.article_comments where id = $1`, [c1]);
+  check(`[${idType}] reply_count induk = 2`, r.rows[0].reply_count === 2, JSON.stringify(r.rows));
+  check(`[${idType}] comment_count artikel = 3`, (await stats()).comment_count === 3, JSON.stringify(await stats()));
+  r = await as(db, "authenticated", ADMIN, `insert into public.article_comments (article_id, author_name, body) values ($1, 'Wafa', 'Terima kasih!') returning is_author`, [art]);
+  check(`[${idType}] komentar admin bertanda penulis`, r.rows?.[0]?.is_author === true, JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `insert into public.article_comments (article_id, author_name, body, is_author) values ($1, 'x', 'y', true)`, [art]);
+  check(`[${idType}] pembaca tidak bisa menandai dirinya penulis`, r.error === "42501", JSON.stringify(r));
+  check(`[${idType}] anon bisa membaca komentar tampil`, (await count(db, "anon", {}, "article_comments")) === 4);
+
+  // suka artikel
+  r = await as(db, "authenticated", R1, `insert into public.article_likes (article_id) values ($1) returning user_id`, [art]);
+  check(`[${idType}] pembaca menyukai artikel`, r.rows?.[0]?.user_id === R1.sub, JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `insert into public.article_likes (article_id) values ($1)`, [art]);
+  check(`[${idType}] suka ganda ditolak (satu suka per pengguna)`, r.error === "23505", JSON.stringify(r));
+  r = await as(db, "authenticated", R2, `insert into public.article_likes (article_id, user_id) values ($1, $2)`, [art, R1.sub]);
+  check(`[${idType}] tidak bisa menyukai atas nama orang lain`, r.error === "42501", JSON.stringify(r));
+  await as(db, "authenticated", R2, `insert into public.article_likes (article_id) values ($1)`, [art]);
+  check(`[${idType}] like_count = 2`, (await stats()).like_count === 2);
+  r = await as(db, "authenticated", R1, `insert into public.article_likes (article_id) values ($1)`, [draft]);
+  check(`[${idType}] menyukai artikel draf ditolak`, r.error === "42501", JSON.stringify(r));
+  check(`[${idType}] pembaca hanya melihat sukanya sendiri`, (await count(db, "authenticated", R1, "article_likes")) === 1);
+  r = await as(db, "anon", {}, `select * from public.article_likes`);
+  check(`[${idType}] anon tidak bisa membaca daftar penyuka`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", R2, `delete from public.article_likes where user_id = $1 returning user_id`, [R1.sub]);
+  check(`[${idType}] tidak bisa menghapus suka orang lain`, !r.error && r.rows.length === 0, JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `delete from public.article_likes where article_id = $1 returning user_id`, [art]);
+  check(`[${idType}] batal suka -> like_count = 1`, r.rows?.length === 1 && (await stats()).like_count === 1, JSON.stringify(await stats()));
+
+  // suka komentar
+  r = await as(db, "authenticated", R2, `insert into public.comment_likes (comment_id) values ($1) returning comment_id`, [c1]);
+  check(`[${idType}] pembaca menyukai komentar`, !r.error, JSON.stringify(r));
+  r = await db.query(`select like_count from public.article_comments where id = $1`, [c1]);
+  check(`[${idType}] like_count komentar = 1`, r.rows[0].like_count === 1);
+
+  // penghitung & isi tidak bisa diubah langsung
+  r = await as(db, "authenticated", R1, `update public.article_comments set like_count = 999 where id = $1`, [c1]);
+  check(`[${idType}] pembaca tidak bisa mengubah like_count komentar`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `update public.article_stats set like_count = 999`);
+  check(`[${idType}] pembaca tidak bisa mengubah article_stats`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `insert into public.article_stats (article_id, like_count) values ($1, 999)`, [draft]);
+  check(`[${idType}] pembaca tidak bisa menambah article_stats`, r.error === "42501", JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `update public.article_comments set is_hidden = true where id = $1 returning id`, [c1]);
+  check(`[${idType}] pembaca tidak bisa menyembunyikan komentar`, !!r.error || r.rows.length === 0, JSON.stringify(r));
+  r = await as(db, "authenticated", R1, `update public.article_comments set body = 'diubah' where id = $1`, [c1]);
+  check(`[${idType}] isi komentar tidak bisa diubah`, r.error === "42501", JSON.stringify(r));
+
+  // hapus
+  r = await as(db, "authenticated", R2, `delete from public.article_comments where id = $1 returning id`, [c1]);
+  check(`[${idType}] tidak bisa menghapus komentar orang lain`, !r.error && r.rows.length === 0, JSON.stringify(r));
+  r = await as(db, "authenticated", R2, `delete from public.article_comments where id = $1 returning id`, [c2]);
+  check(`[${idType}] bisa menghapus komentar sendiri`, r.rows?.length === 1, JSON.stringify(r));
+  r = await db.query(`select reply_count from public.article_comments where id = $1`, [c1]);
+  check(`[${idType}] reply_count turun setelah balasan dihapus`, r.rows[0].reply_count === 1, JSON.stringify(r.rows));
+
+  // moderasi admin
+  r = await as(db, "authenticated", ADMIN, `update public.article_comments set is_hidden = true where id = $1 returning is_hidden`, [c1]);
+  check(`[${idType}] admin menyembunyikan komentar`, r.rows?.[0]?.is_hidden === true, JSON.stringify(r));
+  check(`[${idType}] komentar tersembunyi hilang dari publik`, (await count(db, "anon", {}, "article_comments", `id = ${c1}`)) === 0);
+  check(`[${idType}] comment_count turun saat disembunyikan`, (await stats()).comment_count === 2, JSON.stringify(await stats()));
+  r = await as(db, "authenticated", R2, `insert into public.comment_likes (comment_id) values ($1)`, [c1]);
+  check(`[${idType}] komentar tersembunyi tidak bisa disukai`, !!r.error, JSON.stringify(r));
+  r = await as(db, "authenticated", R2, `insert into public.article_comments (article_id, parent_id, author_name, body) values ($1, $2, 'x', 'y')`, [art, c1]);
+  check(`[${idType}] komentar tersembunyi tidak bisa dibalas`, !!r.error, JSON.stringify(r));
+  r = await as(db, "authenticated", ADMIN, `update public.article_comments set is_hidden = false where id = $1 returning is_hidden`, [c1]);
+  check(`[${idType}] admin menampilkan lagi -> comment_count naik`, r.rows?.[0]?.is_hidden === false && (await stats()).comment_count === 3, JSON.stringify(await stats()));
+
+  // batas spam: maks 5 komentar per menit per pengguna (balasan R2 tadi sudah dihapus, jadi hitungan mulai dari 0)
+  check(`[${idType}] hitungan awal R2 = 0`, (await db.query(`select count(*)::int n from public.article_comments where user_id = $1`, [R2.sub])).rows[0].n === 0);
+  for (let i = 0; i < 4; i++) await addC(R2, "spam " + i);
+  r = await addC(R2, "spam terakhir yang diizinkan");
+  const fifthOk = !r.error;
+  r = await addC(R2, "spam berlebih");
+  check(`[${idType}] batas 5 komentar/menit per pengguna`, fifthOk && !!r.error && /Terlalu banyak/.test(r.message), JSON.stringify(r));
+
+  // artikel dihapus -> suka & komentar ikut terhapus tanpa galat
+  e = await db.query(`delete from public.articles where id = $1`, [art]).then(() => null, (y) => y);
+  check(`[${idType}] hapus artikel menghapus suka & komentar berantai tanpa galat`, !e && (await db.query(`select count(*)::int n from public.article_comments`)).rows[0].n === 0, e && e.message);
 
   // fungsi
   r = await as(db, "anon", {}, `select public.wafa_is_admin() as a`);

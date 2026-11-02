@@ -1,5 +1,5 @@
 // Header bergaya portal berita, tiga lapis:
-//   1. bilah merek  : logo + tagline, sosial, alat baca, tema, CTA, tombol menu seluler (ikut tergulir pergi)
+//   1. bilah merek  : logo, tombol pengaturan (panel: ukuran teks, bahasa, tema, sosial), CTA, tombol menu seluler
 //   2. bilah menu   : ikon beranda, menu dengan mega-menu (panel kartu untuk butir bersubmenu), pencarian
 //   3. Info Terkini : tiker judul artikel terbaru + kurs BI & harga logam (services/markets.js), dapat ditutup untuk sesi ini
 // Menu dibangun dari data CMS (tabel `menus`, lokasi 'header').
@@ -17,7 +17,7 @@ import * as articlesSvc from "../services/articles.js";
 import { getMarket, trendOf } from "../services/markets.js";
 import { formatDateShort } from "../core/format.js";
 import { icon, hasIcon } from "./icons.js";
-import { readerToolsHtml, bindReaderTools } from "./reader-tools.js";
+import { readerToolsHtml, langToggleHtml, bindReaderTools } from "./reader-tools.js";
 import { searchOverlayHtml, bindSearch } from "./search.js";
 import { themeToggleHtml, bindTheme } from "./theme.js";
 
@@ -56,7 +56,7 @@ export function isHomeNode(node) {
 }
 
 const subsOf = (node) => (node.children || []).map((k) => ({ k, p: menuLink(k) })).filter((x) => x.p);
-const megaCols = (n) => (n <= 2 ? 2 : n === 4 ? 4 : 3);
+const megaCols = (n) => (n > 4 ? 2 : 1);
 
 // ---------------------------------------------------------------- markup menu
 function desktopItem(node, index) {
@@ -84,16 +84,19 @@ function megaPanel(node, index) {
   if (!me || !subs.length) return raw("");
   return html`
     <div class="mega__panel" id="mega-${index}" data-mega-panel role="region" aria-label="${"Submenu " + node.label}">
-      <div class="mega__card mega__card--cols-${megaCols(subs.length)}">
-        ${subs.map(({ k, p }, i) => html`
-          <a class="mega__item" href="${p.href}" ${p.attrs} ${p.current ? raw('aria-current="page"') : ""}>
-            <span class="tone-tile tone--${toneOf(i)}">${icon(menuIcon(k, i), { size: 17 })}</span>
-            <span class="mega__body"><b>${k.label}</b>${k.description ? html`<small>${k.description}</small>` : ""}</span>
-          </a>`)}
-        <a class="mega__cta" href="${me.href}" ${me.attrs}>
-          <span class="mega__cta-icon">${icon(menuIcon(node, index), { size: 20 })}</span>
-          <span class="mega__cta-body"><b>${"Semua " + node.label}</b>${node.description ? html`<small>${node.description}</small>` : ""}</span>
-          <span class="mega__cta-action">Lihat selengkapnya ${icon("arrowRight", { size: 15 })}</span>
+      <div class="mega__card mega__card--cols-${megaCols(subs.length)}" data-mega-card>
+        <span class="mega__notch" aria-hidden="true"></span>
+        <span class="mega__glow" aria-hidden="true"></span>
+        <div class="mega__items">
+          ${subs.map(({ k, p }, i) => html`
+            <a class="mega__item" style="--i:${i}" href="${p.href}" ${p.attrs} ${p.current ? raw('aria-current="page"') : ""}>
+              <span class="tone-tile tone--${toneOf(i)}">${icon(menuIcon(k, i), { size: 15 })}</span>
+              <span class="mega__body"><b>${k.label}</b>${k.description ? html`<small>${k.description}</small>` : ""}</span>
+              <span class="mega__go" aria-hidden="true">${icon("arrowRight", { size: 14 })}</span>
+            </a>`)}
+        </div>
+        <a class="mega__cta" style="--i:${subs.length}" href="${me.href}" ${me.attrs}>
+          <span>${"Semua " + node.label}</span>${icon("arrowRight", { size: 14 })}
         </a>
       </div>
     </div>`;
@@ -105,13 +108,12 @@ function drawerItem(node, index) {
   const subs = subsOf(node);
   const id = `drawer-sub-${index}`;
   return html`
-    <li>
+    <li class="drawer__item" style="--i:${index}">
       <div class="drawer__row">
-        <a class="drawer__link" href="${me.href}" ${me.attrs} ${me.current ? raw('aria-current="page"') : ""}>
-          <span class="drawer__ico">${icon(isHomeNode(node) ? "home" : menuIcon(node, index), { size: 17 })}</span>${node.label}</a>
-        ${subs.length ? html`<button type="button" class="drawer__toggle" aria-expanded="false" aria-controls="${id}" aria-label="${"Buka submenu " + node.label}">${icon("chevronDown", { size: 18 })}</button>` : ""}
+        <a class="drawer__link" href="${me.href}" ${me.attrs} ${me.current ? raw('aria-current="page"') : ""}>${node.label}</a>
+        ${subs.length ? html`<button type="button" class="drawer__toggle" aria-expanded="false" aria-controls="${id}" aria-label="${"Buka submenu " + node.label}">${icon("chevronDown", { size: 16 })}</button>` : ""}
       </div>
-      ${subs.length ? html`<ul class="drawer__sub" id="${id}" hidden>${subs.map(({ k, p }) => html`<li><a href="${p.href}" ${p.attrs}>${k.label}</a></li>`)}</ul>` : ""}
+      ${subs.length ? html`<div class="drawer__sub" id="${id}"><ul>${subs.map(({ k, p }) => html`<li><a href="${p.href}" ${p.attrs} ${p.current ? raw('aria-current="page"') : ""}>${k.label}</a></li>`)}</ul></div>` : ""}
     </li>`;
 }
 
@@ -130,13 +132,16 @@ function shellHtml(tree) {
           <img class="site-brand__logo site-brand__logo--light" src="${LOGO_DARK()}" alt="${SITE.name}" width="250" height="36">
           <img class="site-brand__logo site-brand__logo--dark" src="${LOGO_WHITE()}" alt="" aria-hidden="true" width="250" height="36">
         </a>
-        <span class="site-brand__divider" aria-hidden="true"></span>
-        <span class="site-brand__tagline">Edukasi Akuntansi,<br>Perpajakan &amp; Keuangan</span>
         <div class="site-header__actions">
-          <div class="site-header__side" role="group" aria-label="Media sosial">${socialLinksHtml({ size: 15 })}</div>
-          <span class="site-header__sep" aria-hidden="true"></span>
-          <div class="site-header__tools" data-reader-tools>${readerToolsHtml()}</div>
-          ${themeToggleHtml()}
+          <div class="prefs" data-prefs>
+            <button type="button" class="prefs__toggle" data-prefs-toggle aria-expanded="false" aria-controls="site-prefs" aria-label="Pengaturan tampilan" title="Pengaturan tampilan">${icon("sliders", { size: 18 })}</button>
+            <div class="prefs__pop" id="site-prefs" role="group" aria-label="Pengaturan tampilan">
+              <div class="prefs__sec site-header__tools">${readerToolsHtml({ variant: "panel" })}</div>
+              <div class="prefs__row"><span>Bahasa</span>${langToggleHtml()}</div>
+              <div class="prefs__row"><span>Mode gelap</span>${themeToggleHtml()}</div>
+              <div class="prefs__row prefs__row--social"><span>Ikuti</span><div class="site-header__side" role="group" aria-label="Media sosial">${socialLinksHtml({ size: 15 })}</div></div>
+            </div>
+          </div>
           <a class="btn btn--accent btn--sm site-header__cta" href="${pathTo("contact.html")}">${icon("chat", { size: 15 })}<span>Hubungi Saya</span></a>
           <button type="button" class="site-header__burger" data-drawer-open aria-controls="site-drawer" aria-expanded="false" aria-label="Buka menu">${icon("menu", { size: 20 })}</button>
         </div>
@@ -164,21 +169,23 @@ function shellHtml(tree) {
     <div class="backdrop" data-backdrop></div>
     <aside class="drawer" id="site-drawer" aria-label="Menu navigasi" aria-hidden="true">
       <div class="drawer__head">
-        <img src="${LOGO_WHITE()}" alt="${SITE.name}" width="150" height="22" loading="lazy">
-        <button type="button" class="icon-btn" data-drawer-close aria-label="Tutup menu">${icon("close", { size: 22 })}</button>
+        <img src="${LOGO_WHITE()}" alt="${SITE.name}" width="130" height="19" loading="lazy">
+        <button type="button" class="drawer__close" data-drawer-close aria-label="Tutup menu">${icon("close", { size: 18 })}</button>
       </div>
-      <div class="drawer__search">
-        <form class="search-form" action="${pathTo("article.html")}" method="get" role="search" data-search-form>
-          <label class="visually-hidden" for="drawer-q">Cari artikel</label>
-          <input class="input" id="drawer-q" name="q" type="search" placeholder="Cari artikel…" autocomplete="off">
-          <button type="submit" class="btn btn--accent btn--sm" aria-label="Cari">${icon("search", { size: 18 })}</button>
-        </form>
-      </div>
+      <form class="drawer__search" action="${pathTo("article.html")}" method="get" role="search" data-search-form>
+        <label class="visually-hidden" for="drawer-q">Cari artikel</label>
+        <span class="drawer__search-ico" aria-hidden="true">${icon("search", { size: 16 })}</span>
+        <input id="drawer-q" name="q" type="search" placeholder="Cari artikel…" autocomplete="off">
+      </form>
       <nav class="drawer__nav" aria-label="Navigasi seluler"><ul class="drawer__list" data-drawer-list>${tree.map(drawerItem)}</ul></nav>
       <div class="drawer__foot">
-        <div class="drawer__tools">${readerToolsHtml({ variant: "inline" })}${themeToggleHtml()}</div>
-        <a class="btn btn--accent btn--block" href="${pathTo("contact.html")}">Hubungi Saya</a>
-        <div class="drawer__social">${socialLinksHtml({ size: 20 })}</div>
+        ${readerToolsHtml({ variant: "inline" })}
+        <div class="drawer__tools">
+          ${langToggleHtml()}
+          ${themeToggleHtml()}
+          <div class="drawer__social">${socialLinksHtml({ size: 16 })}</div>
+        </div>
+        <a class="btn btn--accent btn--block drawer__cta" href="${pathTo("contact.html")}">${icon("chat", { size: 15 })}<span>Hubungi Saya</span></a>
       </div>
     </aside>`;
 }
@@ -301,6 +308,19 @@ function bindHeader(root) {
     if (opener && opener.focus) opener.focus();
   };
 
+  // panel pengaturan (ukuran teks, bahasa, tema, sosial) di bilah merek
+  const prefs = root.querySelector("[data-prefs]");
+  const prefsBtn = prefs?.querySelector("[data-prefs-toggle]");
+  const setPrefs = (open) => {
+    if (!prefs || prefs.classList.contains("is-open") === open) return;
+    prefs.classList.toggle("is-open", open);
+    prefsBtn.setAttribute("aria-expanded", String(open));
+    prefsY = scrollY;
+  };
+  // tutup saat pembaca benar-benar menggulir (bukan geseran kecil akibat ukuran teks berubah)
+  let prefsY = 0;
+  window.addEventListener("scroll", () => { if (Math.abs(scrollY - prefsY) > 48) setPrefs(false); }, { passive: true });
+
   // mega-menu: butir <li data-mega> <-> panel #mega-n (panel berada di luar <nav> agar tidak terpotong overflow)
   const panelOf = (li) => root.querySelector("#" + CSS.escape(li.dataset.mega));
   const closePanels = (except) => {
@@ -308,15 +328,47 @@ function bindHeader(root) {
       if (li === except) return;
       li.classList.remove("is-open");
       li.querySelector(".site-nav__caret")?.setAttribute("aria-expanded", "false");
-      panelOf(li)?.classList.remove("is-open");
+      const panel = panelOf(li);
+      panel?.classList.remove("is-open");
+      panel?.querySelector("[data-mega-card]")?.classList.remove("has-glow");
     });
+  };
+  // kartu ditempatkan tepat di bawah butir pemicunya (dijepit agar tak keluar layar); takik menunjuk ke butir
+  const placePanel = (li, panel) => {
+    const card = panel.querySelector("[data-mega-card]");
+    if (!card) return;
+    const box = panel.getBoundingClientRect();
+    const at = li.getBoundingClientRect();
+    const pad = parseFloat(getComputedStyle(panel).paddingLeft) || 0;
+    const left = at.left - box.left - pad;
+    const x = Math.max(0, Math.min(left - 8, box.width - 2 * pad - card.offsetWidth));
+    card.style.setProperty("--mega-x", `${x}px`);
+    card.style.setProperty("--notch-x", `${left - x + Math.min(at.width / 2, 40)}px`);
   };
   const openPanel = (li) => {
     closePanels(li);
     li.classList.add("is-open");
     li.querySelector(".site-nav__caret")?.setAttribute("aria-expanded", "true");
-    panelOf(li)?.classList.add("is-open");
+    const panel = panelOf(li);
+    if (!panel) return;
+    placePanel(li, panel);
+    panel.classList.add("is-open");
   };
+  // sorotan lembut yang meluncur mengikuti butir di bawah kursor/fokus
+  const glowTo = (item) => {
+    const card = item.closest("[data-mega-card]");
+    card.style.setProperty("--glow-x", `${item.offsetLeft}px`);
+    card.style.setProperty("--glow-y", `${item.offsetTop}px`);
+    card.style.setProperty("--glow-w", `${item.offsetWidth}px`);
+    card.style.setProperty("--glow-h", `${item.offsetHeight}px`);
+    card.classList.add("has-glow");
+  };
+  root.addEventListener("pointerover", (e) => { const it = e.target.closest(".mega__item"); if (it) glowTo(it); });
+  root.addEventListener("focusin", (e) => { const it = e.target.closest(".mega__item"); if (it) glowTo(it); });
+  root.addEventListener("pointerout", (e) => {
+    const card = e.target.closest("[data-mega-card]");
+    if (card && !e.relatedTarget?.closest?.(".mega__item")) card.classList.remove("has-glow");
+  });
   const later = (fn, ms) => { clearTimeout(timer); timer = setTimeout(fn, ms); };
 
   root.addEventListener("pointerover", (e) => {
@@ -336,6 +388,12 @@ function bindHeader(root) {
     if (open) { openDrawer(open); return; }
     if (e.target.closest("[data-drawer-close]") || e.target === backdrop) { closeDrawer(); return; }
     if (e.target.closest("[data-ticker-close]")) { closeTicker(root); return; }
+    if (e.target.closest("[data-prefs-toggle]")) {
+      const open = !prefs.classList.contains("is-open");
+      setPrefs(open);
+      if (open && e.detail === 0) prefs.querySelector("[data-fs-range]")?.focus();   // dibuka lewat keyboard
+      return;
+    }
 
     const caret = e.target.closest(".site-nav__caret");
     if (caret) {
@@ -350,16 +408,19 @@ function bindHeader(root) {
     if (tog) {
       const isOpen = tog.getAttribute("aria-expanded") !== "true";
       tog.setAttribute("aria-expanded", String(isOpen));
-      const sub = root.querySelector("#" + CSS.escape(tog.getAttribute("aria-controls")));
-      if (sub) sub.hidden = !isOpen;
+      root.querySelector("#" + CSS.escape(tog.getAttribute("aria-controls")))?.classList.toggle("is-open", isOpen);
       return;
     }
     if (e.target.closest(".drawer a[href]")) closeDrawer();
   });
 
-  document.addEventListener("click", (e) => { if (!root.contains(e.target)) closePanels(); });
+  document.addEventListener("click", (e) => {
+    if (!root.contains(e.target)) closePanels();
+    if (prefs && !prefs.contains(e.target)) setPrefs(false);
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      if (prefs?.classList.contains("is-open")) { setPrefs(false); if (prefs.contains(document.activeElement)) prefsBtn.focus(); }
       const openLi = root.querySelector(".site-nav__item.is-open");
       if (openLi) { closePanels(); if (root.contains(document.activeElement)) openLi.querySelector(".site-nav__caret")?.focus(); }
       closeDrawer();
@@ -376,6 +437,7 @@ function bindHeader(root) {
   root.addEventListener("focusout", (e) => {
     const panel = e.target.closest("[data-mega-panel]");
     if (panel && !panel.contains(e.relatedTarget)) closePanels();
+    if (prefs?.contains(e.target) && e.relatedTarget && !prefs.contains(e.relatedTarget)) setPrefs(false);
   });
   window.matchMedia("(min-width: 960px)").addEventListener("change", (m) => { if (m.matches) closeDrawer(); else closePanels(); });
 }

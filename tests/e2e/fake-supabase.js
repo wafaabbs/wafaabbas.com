@@ -4,6 +4,7 @@
 //   window.__AUTH  = { user: {...}|null }     (app_metadata.role === 'admin' => admin)
 //   window.__FAIL  = { tabel: 'pesan' }       (semua kueri ke tabel itu gagal jaringan)
 //   window.__CALLS = [{ table, op }]          (jejak panggilan, untuk asersi)
+//   window.__ANON_DISABLED = true             (sesi anonim ditolak, seperti dashboard yang belum mengizinkannya)
 // Ini BUKAN pengganti Postgres/RLS: aturan hak akses diuji di tests/sql (PGlite).
 
 (function () {
@@ -65,6 +66,35 @@
     return a < b ? -1 : a > b ? 1 : 0;
   }
 
+  // Tiruan trigger migrasi 005 (suka & komentar): nilai bawaan komentar, balasan satu tingkat, hapus berantai,
+  // penghitung. BUKAN Postgres: RLS & batas spam diuji di tests/sql.
+  const ENGAGE = ["article_likes", "comment_likes", "article_comments"];
+  function commentDefaults(p, rows) {
+    const u = window.__AUTH.user || {};
+    let parent = p.parent_id == null ? null : rows.find((r) => String(r.id) === String(p.parent_id));
+    if (parent && parent.parent_id != null) parent = rows.find((r) => String(r.id) === String(parent.parent_id));
+    return { ...p, user_id: u.id, parent_id: parent ? parent.id : null, author_name: String(p.author_name || "").replace(/\s+/g, " ").trim(),
+      body: String(p.body || "").trim(), is_author: !!(u.app_metadata && u.app_metadata.role === "admin"), is_hidden: false,
+      like_count: 0, reply_count: 0, created_at: new Date().toISOString() };
+  }
+  function recount() {
+    let cs = DB.article_comments || [];
+    let ids = new Set(cs.map((c) => String(c.id)));
+    cs = cs.filter((c) => c.parent_id == null || ids.has(String(c.parent_id)));
+    ids = new Set(cs.map((c) => String(c.id)));
+    DB.article_comments = cs;
+    DB.comment_likes = (DB.comment_likes || []).filter((l) => ids.has(String(l.comment_id)));
+    cs.forEach((c) => {
+      c.like_count = DB.comment_likes.filter((l) => String(l.comment_id) === String(c.id)).length;
+      c.reply_count = cs.filter((r) => String(r.parent_id) === String(c.id) && !r.is_hidden).length;
+    });
+    const stats = {};
+    const at = (id) => (stats[id] = stats[id] || { article_id: id, like_count: 0, comment_count: 0 });
+    (DB.article_likes || []).forEach((l) => { at(l.article_id).like_count++; });
+    cs.filter((c) => !c.is_hidden).forEach((c) => { at(c.article_id).comment_count++; });
+    DB.article_stats = Object.values(stats);
+  }
+
   class Query {
     constructor(table) {
       this.table = table; this.op = "select"; this.cols = "*"; this.filters = []; this.orders = [];
@@ -122,7 +152,14 @@
       if (this.op === "insert" || this.op === "upsert") {
         const list = Array.isArray(this.payload) ? this.payload : [this.payload];
         const made = [];
-        for (const p of list) {
+        for (let p of list) {
+          if (this.table === "article_likes" || this.table === "comment_likes") {
+            const k = this.table === "article_likes" ? "article_id" : "comment_id";
+            if (rows.some((r) => String(r[k]) === String(p[k]) && r.user_id === p.user_id)) {
+              return { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } };
+            }
+          }
+          if (this.table === "article_comments") p = commentDefaults(p, rows);
           if (this.op === "upsert" && this.opts.onConflict) {
             const ex = rows.find((r) => String(r[this.opts.onConflict]) === String(p[this.opts.onConflict]));
             if (ex) { Object.assign(ex, p); made.push(ex); continue; }
@@ -154,6 +191,7 @@
         if (this.rangeFrom != null) result = result.slice(this.rangeFrom, this.rangeTo + 1);
         if (this.max != null) result = result.slice(0, this.max);
       }
+      if (this.op !== "select" && ENGAGE.includes(this.table)) recount();
       if (this.op !== "select") persist();
       const showCols = this.op === "select" || this.afterSelect;
       let data = showCols ? result.map((r) => project(r, this.cols)) : null;
@@ -175,6 +213,14 @@
       const u = (window.__USERS || {})[email];
       if (!u) return { data: null, error: { message: "Invalid login credentials" } };
       window.__AUTH.user = u; persist();
+      return { data: { user: u, session: { user: u } }, error: null };
+    },
+    // window.__ANON_DISABLED = true mensimulasikan "Allow anonymous sign-ins" mati di dashboard
+    async signInAnonymously() {
+      if (window.__ANON_DISABLED) return { data: { user: null, session: null }, error: { message: "Anonymous sign-ins are disabled" } };
+      const u = { id: "anon-" + Math.random().toString(36).slice(2, 10), is_anonymous: true, app_metadata: { provider: "anonymous" }, user_metadata: {} };
+      window.__AUTH.user = u; persist();
+      (window.__ANON_SIGNINS = (window.__ANON_SIGNINS || 0) + 1);
       return { data: { user: u, session: { user: u } }, error: null };
     },
     async signOut() { window.__AUTH.user = null; persist(); window.__SIGNED_OUT = (window.__SIGNED_OUT || 0) + 1; return { error: null }; },

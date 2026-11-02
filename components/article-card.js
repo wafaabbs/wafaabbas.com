@@ -9,24 +9,21 @@ export const PLACEHOLDER_IMAGE = () => pathTo("assets/images/thumbnail-placehold
 
 /**
  * @param {object} a artikel (kolom daftar)
- * @param {{variant?:"default"|"list"|"compact"|"hero"|"hero-lg", eager?:boolean}} [o]
+ * @param {{eager?:boolean}} [o]
  * @returns {import("../core/dom.js").Raw|""} string kosong bila artikel tidak punya slug sah (kartu tidak dirender)
  */
-export function articleCard(a, { variant = "default", eager = false } = {}) {
+export function articleCard(a, { eager = false } = {}) {
   if (!a || !slugOk(a.slug)) return raw("");
   const url = articleHref(a.slug);
   const cat = a.category && slugOk(a.category.slug) ? a.category : null;
   const img = safeImageUrl(a.thumbnail_url) || PLACEHOLDER_IMAGE();
   const date = formatDateShort(a.published_at);
-  const plain = variant === "compact" || variant.startsWith("hero");
-  const hit = plain ? null : snippetHtml(a.snippet);
-  const excerpt = plain || hit ? "" : truncate(markdownToText(a.excerpt || ""), 150);
-  const cls = ["card", variant !== "default" ? `card--${variant}` : ""].join(" ").trim();
-  const showMedia = variant !== "compact";
+  const hit = snippetHtml(a.snippet);
+  const excerpt = hit ? "" : truncate(markdownToText(a.excerpt || ""), 150);
 
   return html`
-    <article class="${cls}">
-      ${showMedia ? html`<div class="card__media"><img src="${img}" alt="" width="640" height="360" loading="${eager ? "eager" : "lazy"}" decoding="async" ${eager ? raw('fetchpriority="high"') : ""} data-fallback></div>` : ""}
+    <article class="card">
+      <div class="card__media"><img src="${img}" alt="" width="640" height="360" loading="${eager ? "eager" : "lazy"}" decoding="async" ${eager ? raw('fetchpriority="high"') : ""} data-fallback></div>
       <div class="card__body">
         ${cat ? html`<a class="badge" href="${categoryHref(cat.slug)}">${cat.name}</a>` : ""}
         <h3 class="card__title"><a href="${url}">${a.title || "Tanpa judul"}</a></h3>

@@ -2,7 +2,7 @@
 // DnD, hapus aman, nonaktif, footer, kegagalan), Page Manager, penolakan tulis (RLS ditolak) tidak boleh sukses palsu.
 // Aturan RLS/hak akses sebenarnya diuji di tests/sql/db.test.mjs (Postgres sungguhan via PGlite).
 import { startServer, launch, suite, loadSdkSource } from "./harness.mjs";
-import { makeDb, seed, ADMIN, FAKE_ADMIN } from "./fixtures.mjs";
+import { seed, ADMIN, FAKE_ADMIN } from "./fixtures.mjs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 
@@ -14,7 +14,6 @@ const t = suite("admin");
 
 const rows = (table) => b.eval(`JSON.parse(sessionStorage.getItem('__DBSTATE')).${table}`);
 const menuRow = async (label) => (await rows("menus")).find((m) => m.label === label);
-const item = (label) => `.mtree__item[data-id="${"__ID__"}"]`;
 const actOn = async (label, act) => {
   const id = (await menuRow(label)).id;
   await b.click(`.mtree__item[data-id="${id}"] > .mrow [data-act="${act}"]`);
@@ -393,6 +392,33 @@ try {
     await b.click(`.admin-head [data-fetch]`);
     await b.waitFor(`!!document.querySelector('.toast--error')`);
     t.ok(/tidak ditemukan.*fetch-fiskal/.test(await b.eval(`document.querySelector('.toast--error').textContent`)), "fungsi belum di-deploy -> pesan jelas");
+  });
+
+  await t.section("Komentar (admin): moderasi", async () => {
+    const cdb = `window.__DB.article_comments=[
+      {id:1,article_id:1,parent_id:null,user_id:'r1',author_name:'Budi',body:'Komentar baik',is_author:false,is_hidden:false,like_count:2,reply_count:1,created_at:'2026-10-01T10:00:00Z'},
+      {id:2,article_id:1,parent_id:1,user_id:'r2',author_name:'Sinta',body:'Balasan',is_author:false,is_hidden:false,like_count:0,reply_count:0,created_at:'2026-10-01T11:00:00Z'},
+      {id:3,article_id:2,parent_id:null,user_id:'r3',author_name:'Spammer',body:'<b>beli sekarang</b>',is_author:false,is_hidden:false,like_count:0,reply_count:0,created_at:'2026-10-02T10:00:00Z'}];`;
+    await b.open("/admin/comments.html", { seed: admin(cdb) });
+    await b.waitFor(`!!document.querySelector('[data-hide]')`);
+    t.ok(await b.eval(`!!document.querySelector('.admin__nav a[aria-current="page"][href="./comments.html"]')`), "menu Komentar ada & aktif di sidebar");
+    t.eq(await b.eval(`[...document.querySelectorAll('#admin-main tbody th b')].map(e=>e.textContent)`), ["Spammer", "Sinta", "Budi"], "komentar terbaru di atas, termasuk balasan");
+    t.ok(await b.eval(`!document.querySelector('#admin-main tbody b b') && document.querySelector('#admin-main tbody').textContent.includes('<b>beli sekarang</b>')`), "isi komentar di-escape");
+    t.ok(await b.eval(`!!document.querySelector('#admin-main a[href*="artikel-2"][href$="#komentar-3"]')`), "tautan langsung ke komentar di artikel");
+    await b.click(`[data-hide="3"]`);
+    await b.waitFor(`window.__DB.article_comments.find(c=>c.id===3).is_hidden === true`);
+    t.ok(true, "Sembunyikan -> is_hidden true");
+    await b.waitFor(`document.querySelector('[data-hide="3"]')?.textContent === 'Tampilkan'`);
+    t.ok(true, "tombol berubah jadi Tampilkan");
+    await b.click(`[data-del="1"]`);
+    await b.waitFor(`!!document.querySelector('[data-choice=__ok]')`);
+    t.ok(/1 balasannya/.test(await b.eval(`document.querySelector('.modal__body').textContent`)), "konfirmasi menyebut jumlah balasan yang ikut terhapus");
+    await b.eval(`document.querySelector('[data-choice=__ok]').click()`);
+    await b.waitFor(`!window.__DB.article_comments.some(c=>c.id===1)`);
+    t.ok(await b.eval(`!window.__DB.article_comments.some(c=>c.id===2)`), "hapus komentar ikut menghapus balasannya");
+    await b.open("/admin/comments.html", { seed: admin("window.__MISSING_TABLES=['article_comments'];") });
+    await b.waitFor(`/Migrasi 005/.test(document.querySelector('#admin-main').textContent)`);
+    t.ok(true, "tanpa migrasi 005: pesan jelas");
   });
 
 } finally {
