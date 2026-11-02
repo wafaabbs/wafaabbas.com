@@ -308,6 +308,39 @@ async function suite(PGlite, idType) {
   r = await as(db, "authenticated", ADMIN, `delete from public.external_news where title = 'Dari sumber nonaktif' returning id`);
   check(`[${idType}] admin bisa menghapus tautan`, r.rows?.length === 1, JSON.stringify(r));
 
+  // ---- 004: pencarian teks penuh ----
+  await db.exec(MIG("004_article_search.sql"));
+  await db.exec(MIG("004_article_search.sql"));                          // idempoten
+  check(`[${idType}] 004 idempoten`, true);
+  await db.exec(`insert into public.articles (title, slug, excerpt, content, status, published_at) values
+    ('Tarif Efektif PPh 21 untuk Karyawan', 'ter-karyawan', 'Cara menghitung pemotongan bulanan.', 'Isi tentang penghasilan bruto dan kategori TER.', 'published', now()),
+    ('Memahami PPN Dalam Negeri', 'ppn-dn', 'Ringkasan PPN.', 'Tarif efektif PPN 12 persen dengan DPP nilai lain.', 'published', now() - interval '1 day'),
+    ('Catatan Perpajakan Daerah', 'pajak-daerah', null, 'Pajak bumi dan bangunan.', 'published', now() - interval '2 day'),
+    ('Draf Rahasia Perpajakan', 'draf-pajak', null, 'pajak rahasia', 'draft', null)`);
+  const search = async (q, claims = {}, role = "anon") => (await as(db, role, claims, `select item, total from public.search_articles($1)`, [q])).rows || [];
+  const slugs = (hits) => JSON.stringify(hits.map((h) => h.item.slug));
+  let hits = await search("karyawan pph 21");
+  check(`[${idType}] urutan kata bebas: "karyawan pph 21" menemukan "PPh 21 untuk Karyawan"`, hits.length === 1 && hits[0].item.slug === "ter-karyawan", slugs(hits));
+  hits = await search("pemotongan");
+  check(`[${idType}] mencari di ringkasan`, hits.some((h) => h.item.slug === "ter-karyawan"), slugs(hits));
+  hits = await search("bangunan");
+  check(`[${idType}] mencari di ISI artikel + cuplikan bertanda`, hits.length === 1 && hits[0].item.slug === "pajak-daerah" && /\[\[bangunan\]\]/i.test(hits[0].item.snippet), JSON.stringify(hits[0] && hits[0].item.snippet));
+  hits = await search("pajak");
+  check(`[${idType}] kata dasar: "pajak" menemukan "Perpajakan"; draf tidak bocor`, hits.some((h) => h.item.slug === "pajak-daerah") && !hits.some((h) => h.item.slug === "draf-pajak"), slugs(hits));
+  hits = await search("pajak", ADMIN, "authenticated");
+  check(`[${idType}] bahkan untuk admin, fungsi hanya mengembalikan artikel terbit`, !hits.some((h) => h.item.slug === "draf-pajak"), slugs(hits));
+  hits = await search('"tarif efektif"');
+  check(`[${idType}] frasa persis + peringkat judul di atas isi`, hits.length === 2 && hits[0].item.slug === "ter-karyawan", slugs(hits));
+  hits = await search('"tarif efektif" -ppn');
+  check(`[${idType}] pengecualian kata dengan tanda minus`, hits.length === 1 && hits[0].item.slug === "ter-karyawan", slugs(hits));
+  check(`[${idType}] total & kategori ikut terkirim`, hits.length === 1 && Number(hits[0].total) === 1 && "category" in hits[0].item);
+  hits = (await as(db, "anon", {}, `select item, total from public.search_articles('tarif', 2, 1)`)).rows || [];
+  check(`[${idType}] paginasi: halaman 2 (1 per halaman) berisi hasil ke-2, total = semua hasil`, hits.length === 1 && Number(hits[0].total) === 2 && hits[0].item.slug === "ppn-dn", JSON.stringify(hits.map((h) => [h.item.slug, h.total])));
+  hits = (await as(db, "anon", {}, `select item from public.search_articles('pajak', 1, 12, array['999999'])`)).rows || [];
+  check(`[${idType}] filter kategori`, hits.length === 0);
+  r = await as(db, "anon", {}, `select * from public.search_articles($1)`, ["'); drop table public.articles; --"]);
+  check(`[${idType}] masukan berbahaya aman (tanpa galat, tabel utuh)`, !r.error && (await count(db, "postgres", {}, "articles")) > 0, JSON.stringify(r.error));
+
   // fungsi
   r = await as(db, "anon", {}, `select public.wafa_is_admin() as a`);
   check(`[${idType}] wafa_is_admin() false untuk anon`, r.rows?.[0]?.a === false);

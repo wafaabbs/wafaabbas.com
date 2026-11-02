@@ -7,6 +7,7 @@ Situs edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas. HTML + CSS + 
 - **Publik**: beranda editorial (hero unggulan, kabar terbaru, blok per rubrik, sidebar), daftar artikel dengan pencarian & pagination, detail artikel (daftar isi otomatis, artikel terkait, ukuran huruf), kategori bertingkat, halaman informatif dari CMS, tentang, kontak, tools, 404.
 - **Navigasi dari CMS**: menu header (dengan submenu) dan footer dibangun dari tabel `menus`. Bila gagal dimuat, menu cadangan bawaan (`core/config.js`) dipakai agar halaman tidak kosong.
 - **Peralatan** (`alat.html`) dengan **Kalkulator Pajak** (`kalkulator-pajak.html`; rumus di `core/tax.js`).
+- **Pencarian teks penuh** artikel (judul, ringkasan, isi; urutan relevansi; "frasa" & -pengecualian) lewat `search_articles` (migrasi 004), dengan cadangan judul + ringkasan.
 - **Kabar Fiskal** (`kabar-fiskal.html`): tautan otomatis dari fiskal.kemenkeu.go.id lewat Edge Function `supabase/functions/fetch-fiskal` (lihat `supabase/README.md`).
 - **Admin** (`/admin/`): ringkasan, artikel (editor markdown + pratinjau, unggah thumbnail, slot unggulan), kategori, **Menu Manager**, **Page Manager**, konten beranda (unggulan & banner).
 

@@ -361,3 +361,10 @@ body { top: 0 !important; }
 .share-pop__copy input { flex: 1; min-width: 0; height: 36px; padding: 0 0.6rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--paper); color: var(--text-soft); font-size: 0.78rem; }
 .share-pop__native { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin-top: 0.5rem; padding: 0.45rem; border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); background: none; color: var(--text-soft); font-size: 0.8rem; font-weight: var(--weight-bold); }
 .share-pop__native[hidden] { display: none; }
+
+/* ---- cuplikan hasil pencarian teks penuh ---- */
+.card__snippet { font-size: var(--text-sm); color: var(--text-soft); -webkit-line-clamp: 4; }
+.card__snippet mark, .xnews-row mark { padding: 0 0.15em; border-radius: 3px; background: var(--accent-100); color: var(--text); font-weight: var(--weight-bold); }
+[data-theme="dark"] .card__snippet mark { background: rgb(129 215 66 / 0.22); }
+.search-tips { margin: -0.5rem 0 1rem; font-size: var(--text-xs); color: var(--text-muted); }
+.search-tips kbd { font-size: 0.95em; }

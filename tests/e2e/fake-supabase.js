@@ -191,6 +191,47 @@
     },
   };
 
+  // Tiruan search_articles (migrasi 004): token per kata (urutan bebas), "frasa", -pengecualian, bobot judul > ringkasan > isi,
+  // cuplikan dengan penanda [[...]]. BUKAN Postgres: kata dasar bahasa Indonesia diuji di tests/sql.
+  // window.__MISSING_RPC = ['search_articles'] mensimulasikan migrasi 004 belum dijalankan.
+  const words = (s) => String(s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+  async function rpc(name, args) {
+    window.__CALLS.push({ table: "rpc:" + name, op: "rpc" });
+    await Promise.resolve();
+    if ((window.__MISSING_RPC || []).includes(name)) return { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
+    if (name !== "search_articles") return { data: null, error: null };
+    const raw = String(args.q || "");
+    const phrases = [...raw.matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase().trim());
+    const rest = raw.replace(/"[^"]*"/g, " ");
+    const exclude = (rest.match(/(?:^|\s)-([^\s]+)/g) || []).map((w) => w.trim().slice(1).toLowerCase());
+    const include = words(rest.replace(/(?:^|\s)-[^\s]+/g, " "));
+    const cats = args.category_ids;
+    const scored = (DB.articles || []).filter((a) => a.status === "published" && (!cats || cats.includes(String(a.category_id)))).map((a) => {
+      const f = { t: words(a.title), e: words(a.excerpt), c: words(a.content) };
+      const all = [...f.t, ...f.e, ...f.c];
+      const text = [a.title, a.excerpt, a.content].join(" ").toLowerCase();
+      if (!include.every((w) => all.includes(w))) return null;
+      if (!phrases.every((p) => text.includes(p))) return null;
+      if (exclude.some((w) => all.includes(w))) return null;
+      if (!include.length && !phrases.length) return null;
+      const rank = include.reduce((s, w) => s + (f.t.includes(w) ? 3 : f.e.includes(w) ? 2 : 1), 0) + phrases.filter((p) => String(a.title).toLowerCase().includes(p)).length * 3;
+      return { a, rank };
+    }).filter(Boolean).sort((x, y) => y.rank - x.rank || String(y.a.published_at).localeCompare(String(x.a.published_at)));
+    const size = Math.max(1, Math.min(args.page_size || 12, 50));
+    const page = scored.slice((Math.max(1, args.page_num || 1) - 1) * size, Math.max(1, args.page_num || 1) * size);
+    const data = page.map(({ a }) => {
+      const hitWord = [...include, ...phrases].find((w) => String(a.content || "").toLowerCase().includes(w));
+      // seperti ts_headline: potongan di sekitar kata yang cocok
+      const at = hitWord ? String(a.content).toLowerCase().indexOf(hitWord) : -1;
+      const around = at >= 0 ? String(a.content).slice(Math.max(0, at - 50), at + 100) : String(a.content || "").slice(0, 120);
+      const snippet = hitWord ? around.replace(new RegExp("(" + hitWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i"), "[[$1]]") : around;
+      const cat = (DB.categories || []).find((c) => String(c.id) === String(a.category_id));
+      const { content, ...cols } = a;
+      return { item: { ...cols, category: cat ? { id: cat.id, name: cat.name, slug: cat.slug, parent_id: cat.parent_id } : null, snippet }, total: scored.length };
+    });
+    return { data, error: null };
+  }
+
   window.supabase = {
     createClient() {
       const functions = {
@@ -200,7 +241,7 @@
           return { data: window.__FN_RESULT || { results: [{ source: "berita-fiskal", status: "ok", count: 3 }] }, error: null };
         },
       };
-      return { from: (t) => new Query(t), auth, storage, functions, rpc: async () => ({ data: null, error: null }) };
+      return { from: (t) => new Query(t), auth, storage, functions, rpc };
     },
   };
 })();

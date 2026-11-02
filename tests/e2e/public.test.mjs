@@ -60,9 +60,29 @@ try {
     await b.open("/article.html?page=2", { seed: seed() });
     await b.waitFor(`document.querySelector('#list-root .card')`);
     t.eq(await b.eval(`document.querySelectorAll('#list-root .card').length`), 4, "halaman 2 berisi sisa 4 artikel (16 terbit - 12)");
+    // pencarian teks penuh (search_articles, migrasi 004)
     await b.open("/article.html?q=Artikel%203", { seed: seed() });
     await b.waitFor(`document.querySelector('#list-root .card, #list-root .state')`);
-    t.ok(await b.eval(`[...document.querySelectorAll('#list-root .card')].every(c=>/Artikel 3/.test(c.textContent))`), "pencarian memfilter");
+    t.eq(await b.eval(`document.querySelector('#list-root .card .card__title').textContent.trim()`), "Artikel 3", "relevansi: judul yang paling cocok di urutan pertama");
+    t.ok(/relevansi/.test(await b.eval(`document.querySelector('.result-info').textContent`)), "info: diurutkan menurut relevansi");
+    t.ok(await b.eval(`window.__CALLS.some(c=>c.table==='rpc:search_articles')`), "memakai fungsi search_articles");
+    await b.open("/article.html?q=zebrakopi", { seed: seed() });
+    await b.waitFor(`document.querySelector('#list-root .card, #list-root .state')`);
+    t.ok(await b.eval(`document.querySelectorAll('#list-root .card').length === 1 && /Artikel 7/.test(document.querySelector('#list-root .card__title').textContent)`), "kata yang hanya ada di ISI artikel ditemukan");
+    t.eq(await b.eval(`document.querySelector('#list-root .card__snippet mark') && document.querySelector('#list-root .card__snippet mark').textContent`), "zebrakopi", "cuplikan isi dengan kata yang cocok ditandai");
+    t.ok(!(await b.eval(`document.querySelector('#list-root .card__snippet').textContent`)).includes("**"), "cuplikan bersih dari tanda markdown");
+    await b.open("/article.html?q=" + encodeURIComponent('"Artikel 3" -zebrakopi'), { seed: seed() });
+    await b.waitFor(`document.querySelector('#list-root .card, #list-root .state')`);
+    t.eq(await b.eval(`document.querySelector('#list-q').value`), '"Artikel 3" -zebrakopi', "tanda kutip & minus dipertahankan di kolom cari");
+    t.eq(await b.eval(`document.querySelector('#list-root .card .card__title').textContent.trim()`), "Artikel 3", "frasa persis");
+    await b.open("/article.html?q=" + encodeURIComponent("<img src=x onerror=window.__pwned=1>"), { seed: seed() });
+    await b.waitFor(`document.querySelector('#list-root .card, #list-root .state')`);
+    t.eq(await b.eval(`window.__pwned`), 0, "kata kunci berbahaya tidak dieksekusi");
+    // migrasi 004 belum dijalankan -> pencarian lama (judul + ringkasan) tetap berfungsi
+    await b.open("/article.html?q=Artikel%203", { seed: seed({ extra: "window.__MISSING_RPC=['search_articles'];" }) });
+    await b.waitFor(`document.querySelector('#list-root .card, #list-root .state')`);
+    t.ok(await b.eval(`[...document.querySelectorAll('#list-root .card')].every(c=>/Artikel 3/.test(c.textContent)) && document.querySelectorAll('#list-root .card').length >= 1`), "cadangan: pencarian judul + ringkasan");
+    t.ok(!/relevansi/.test(await b.eval(`document.querySelector('.result-info').textContent`)), "cadangan: tanpa label relevansi");
     await b.open("/article.html?q=zzzz-tidak-ada", { seed: seed() });
     await b.waitFor(`document.querySelector('#list-root .state, #list-root .empty')`);
     t.ok(true, "pencarian kosong menampilkan state kosong");

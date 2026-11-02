@@ -28,10 +28,10 @@ export class AppError extends Error {
   }
 }
 
-/** Kode PostgREST/Postgres untuk kolom/tabel yang belum ada (skema belum dimigrasi). */
+/** Kode PostgREST/Postgres untuk kolom/tabel/fungsi yang belum ada (skema belum dimigrasi). */
 export function isMissingSchema(error) {
   const code = error && (error.code || (error.cause && error.cause.code));
-  return ["42703", "42P01", "PGRST204", "PGRST205", "PGRST200"].includes(code);
+  return ["42703", "42P01", "42883", "PGRST204", "PGRST205", "PGRST200", "PGRST202"].includes(code);
 }
 
 export function normalizeError(error) {

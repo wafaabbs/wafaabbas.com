@@ -18,7 +18,9 @@ export function articleCard(a, { variant = "default", eager = false } = {}) {
   const cat = a.category && slugOk(a.category.slug) ? a.category : null;
   const img = safeImageUrl(a.thumbnail_url) || PLACEHOLDER_IMAGE();
   const date = formatDateShort(a.published_at);
-  const excerpt = variant === "compact" || variant.startsWith("hero") ? "" : truncate(markdownToText(a.excerpt || ""), 150);
+  const plain = variant === "compact" || variant.startsWith("hero");
+  const hit = plain ? null : snippetHtml(a.snippet);
+  const excerpt = plain || hit ? "" : truncate(markdownToText(a.excerpt || ""), 150);
   const cls = ["card", variant !== "default" ? `card--${variant}` : ""].join(" ").trim();
   const showMedia = variant !== "compact";
 
@@ -29,9 +31,29 @@ export function articleCard(a, { variant = "default", eager = false } = {}) {
         ${cat ? html`<a class="badge" href="${categoryHref(cat.slug)}">${cat.name}</a>` : ""}
         <h3 class="card__title"><a href="${url}">${a.title || "Tanpa judul"}</a></h3>
         ${excerpt ? html`<p class="card__excerpt">${excerpt}</p>` : ""}
+        ${hit ? html`<p class="card__excerpt card__snippet">${hit}</p>` : ""}
         ${date ? html`<div class="card__meta"><time datetime="${isoDate(a.published_at)}">${date}</time></div>` : ""}
       </div>
     </article>`;
+}
+
+/**
+ * Cuplikan hasil pencarian teks penuh: teks markdown dengan penanda [[kata]] dari ts_headline.
+ * Seluruh teks di-escape dulu, baru penanda diganti <mark>; tanpa penanda (cocok hanya di judul) -> null.
+ */
+export function snippetHtml(snippet) {
+  const s = String(snippet ?? "");
+  if (!s.includes("[[")) return null;
+  const clean = s
+    .replace(/!?\[([^\]\[]*)\]\([^)]*\)/g, "$1")      // tautan/gambar markdown -> teks tautannya
+    .replace(/(^|\s)#{1,6}\s+/g, "$1")                  // tanda judul
+    .replace(/[*_`>|~]+/g, "")                           // tebal/miring/kode/kutipan/tabel
+    .replace(/\s+/g, " ").trim();
+  const out = clean.split(/(\[\[[^\]]*\]\])/g).map((part) => {
+    const m = part.match(/^\[\[([^\]]*)\]\]$/);
+    return m ? html`<mark>${m[1]}</mark>` : html`${part}`;
+  });
+  return html`…${out}…`;
 }
 
 /** Ganti gambar yang gagal dimuat dengan placeholder (satu kali). Pengganti atribut onerror inline. */

@@ -3,7 +3,7 @@
 import { SUPABASE, LIMITS } from "../core/config.js";
 import { slugify } from "../core/format.js";
 import { parseLink } from "../core/url.js";
-import { table, unwrap, unwrapWithCount, unwrapDelete, AppError } from "./client.js";
+import { getClient, table, unwrap, unwrapWithCount, unwrapDelete, AppError } from "./client.js";
 import * as storage from "./storage.js";
 
 export const STATUS = { DRAFT: "draft", PUBLISHED: "published" };
@@ -24,10 +24,31 @@ export function sanitizeSearch(q) {
 }
 
 /**
+ * Pencarian teks penuh (judul, ringkasan, isi) lewat fungsi search_articles (supabase/migrations/004):
+ * urutan kata bebas, "frasa persis", -pengecualian, kata dasar bahasa Indonesia, diurutkan menurut relevansi.
+ * Setiap butir membawa `snippet` dengan penanda [[...]] di sekitar kata yang cocok.
+ * Bila migrasi 004 belum dijalankan -> null (pemanggil kembali ke pencarian judul + ringkasan).
+ */
+async function searchFullText({ page, pageSize, categoryIds, q }) {
+  const args = { q, page_num: Math.max(1, page), page_size: pageSize, category_ids: categoryIds && categoryIds.length ? categoryIds.map(String) : null };
+  let rows;
+  try { rows = await unwrap(getClient().rpc("search_articles", args)); }
+  catch (error) { if (error.kind === "schema") return null; throw error; }
+  rows = rows || [];
+  return { items: rows.map((r) => r.item).filter(Boolean), total: rows.length ? Number(rows[0].total) || 0 : 0, fullText: true };
+}
+
+/**
  * Daftar artikel TERBIT (publik). Hanya kolom ringan.
- * @returns {{items:object[], total:number}}
+ * Dengan kata kunci: pencarian teks penuh bila tersedia, selain itu judul + ringkasan.
+ * @returns {{items:object[], total:number, fullText?:boolean}}
  */
 export async function listPublished({ page = 1, pageSize = LIMITS.pageSize, categoryIds, q } = {}) {
+  const term = String(q ?? "").replace(/\s+/g, " ").trim().slice(0, LIMITS.searchMaxLength);
+  if (term) {
+    const found = await searchFullText({ page, pageSize, categoryIds, q: term });
+    if (found) return found;
+  }
   const from = (Math.max(1, page) - 1) * pageSize;
   let query = t()
     .select(COLS_LIST, { count: "exact" })

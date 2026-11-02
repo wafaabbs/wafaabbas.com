@@ -31,7 +31,7 @@ export async function listNews({ source, q, page = 1, pageSize = 20 } = {}) {
     .range(from, from + pageSize - 1);
   if (source) query = query.eq("source_id", source);
   const term = sanitizeSearch(q || "");
-  if (term) query = query.ilike("title", `%${term}%`);
+  if (term) query = query.or(`title.ilike.%${term}%,subtitle.ilike.%${term}%`);
   const { data, count } = await unwrapWithCount(query);
   return { items: data.filter((n) => safeExternalUrl(n.url)), total: count };
 }

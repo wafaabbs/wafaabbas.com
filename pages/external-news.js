@@ -47,8 +47,8 @@ function tabsHtml(sources) {
 function searchHtml() {
   return html`<form class="search-form xnews-search" action="${href(PAGE)}" method="get" role="search">
     ${sumber ? html`<input type="hidden" name="sumber" value="${sumber}">` : ""}
-    <label class="visually-hidden" for="xq">Cari judul</label>
-    <input class="input" id="xq" name="q" type="search" value="${q}" maxlength="80" placeholder="Cari judul, mis. APBN, PPN, kurs…" autocomplete="off">
+    <label class="visually-hidden" for="xq">Cari judul atau keterangan</label>
+    <input class="input" id="xq" name="q" type="search" value="${q}" maxlength="80" placeholder="Cari judul atau keterangan, mis. APBN, PPN, kurs…" autocomplete="off">
     <button type="submit" class="btn">${icon("search", { size: 18 })}<span>Cari</span></button>
   </form>`;
 }

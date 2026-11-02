@@ -12,7 +12,7 @@ export function searchOverlayHtml() {
       <div class="search-overlay__box">
         <div class="search-overlay__head">
           <span class="tone-tile tone--primary">${icon("search", { size: 17 })}</span>
-          <div><b>Cari di ${SITE.name}</b><small>Judul dan ringkasan artikel yang sudah terbit</small></div>
+          <div><b>Cari di ${SITE.name}</b><small>Judul, ringkasan, dan isi artikel · "frasa persis" · -kecualikan</small></div>
           <button type="button" class="panel-close" data-search-close aria-label="Tutup pencarian">${icon("close", { size: 14 })}</button>
         </div>
         <form class="search-overlay__form" action="${pathTo("article.html")}" method="get" role="search" data-search-form>

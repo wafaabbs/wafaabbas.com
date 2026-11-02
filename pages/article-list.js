@@ -16,7 +16,9 @@ import { bootChrome, render } from "./boot.js";
 
 bootChrome();
 
-const q = articlesSvc.sanitizeSearch(getParam("q") || "");
+// Kata kunci apa adanya (tanda kutip & minus dipakai pencarian teks penuh); dirapikan spasi & panjangnya saja.
+// Pembersihan karakter khusus untuk filter cadangan dilakukan di services/articles.js.
+const q = String(getParam("q") || "").replace(/\s+/g, " ").trim().slice(0, LIMITS.searchMaxLength);
 const page = getPageParam();
 const root = document.getElementById("list-root");
 const head = document.getElementById("list-head");
@@ -39,7 +41,7 @@ render(head, html`
 async function load() {
   render(root, html`<ul class="card-grid" aria-busy="true" aria-label="Memuat artikel">${cardSkeletons(6)}</ul>`);
   try {
-    const [{ items, total }, catsR] = await Promise.all([
+    const [{ items, total, fullText }, catsR] = await Promise.all([
       articlesSvc.listPublished({ page, pageSize: LIMITS.pageSize, q }),
       categoriesSvc.list().catch(() => []),
     ]);
@@ -55,13 +57,14 @@ async function load() {
         ? emptyState({ title: "Halaman tidak ada", text: `Hanya ada ${pages} halaman.`, action: { href: href("article.html", { q }), label: "Ke halaman pertama" } })
         : emptyState({
             title: q ? "Tidak ada artikel yang cocok" : "Belum ada artikel",
-            text: q ? "Coba kata kunci lain yang lebih umum." : "Artikel yang sudah dipublikasikan akan tampil di sini.",
+            text: q ? "Coba kata kunci lain yang lebih umum, kurangi jumlah kata, atau hapus tanda kutip dan tanda minus." : "Artikel yang sudah dipublikasikan akan tampil di sini.",
             action: q ? { href: href("article.html"), label: "Lihat semua artikel" } : null,
           }));
       return;
     }
     render(root, html`
-      <p class="result-info" role="status">${total} artikel${q ? " ditemukan" : ""} · halaman ${page} dari ${pages}</p>
+      <p class="result-info" role="status">${total} artikel${q ? " ditemukan" : ""}${fullText ? " · diurutkan menurut relevansi" : ""} · halaman ${page} dari ${pages}</p>
+      ${q ? html`<p class="search-tips">Tips: <kbd>"tarif efektif"</kbd> untuk frasa persis, <kbd>-ppn</kbd> untuk mengecualikan kata. Pencarian mencakup judul, ringkasan, dan isi artikel.</p>` : ""}
       <ul class="card-grid">${items.map((a) => html`<li>${articleCard(a)}</li>`)}</ul>
       ${pagination({ page, pages, hrefFor: (n) => href("article.html", { q, page: n }) })}`);
   } catch (error) {

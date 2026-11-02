@@ -16,7 +16,8 @@ export function makeDb() {
       id: i, title: `Artikel ${i}`, slug: `artikel-${i}`, excerpt: `Ringkasan artikel ${i}`,
       category_id: i % 4 === 0 ? 4 : i % 3 === 0 ? 3 : i % 2 === 0 ? 2 : 1, status: "published",
       published_at: day(i), created_at: day(i), updated_at: day(i), thumbnail_url: null,
-      content: `## Pendahuluan\n\n${long(3)}\n\n## Pembahasan\n\n${long(3)}\n\n### Rincian\n\n- satu\n- dua\n\n## Penutup\n\n${long(2)}`,
+      content: `## Pendahuluan\n\n${long(3)}\n\n## Pembahasan\n\n${long(3)}\n\n### Rincian\n\n- satu\n- dua\n\n## Penutup\n\n${long(2)}` +
+        (i === 7 ? "\n\nIstilah **zebrakopi** hanya muncul di isi artikel ini." : ""),
     });
   }
   articles.push({ id: 100, title: "RAHASIA DRAFT", slug: "rahasia-draft", excerpt: "tidak boleh tampil", category_id: 1, status: "draft", published_at: null, created_at: day(40), updated_at: day(40), thumbnail_url: null, content: "## draft\n\nisi draft" });
