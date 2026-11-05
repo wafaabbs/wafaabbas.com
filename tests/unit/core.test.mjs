@@ -5,6 +5,7 @@ import { slugify, pageCount, truncate } from "../../core/format.js";
 import { html, raw, esc } from "../../core/dom.js";
 import { lastTwo, perGram, trendOf } from "../../services/markets.js";
 import * as tax from "../../core/tax.js";
+import * as mk from "../../core/market.js";
 import { audit, bucketPathsIn, ORPHAN_GRACE_MS } from "../../core/thumbnail-audit.js";
 import * as fk from "../../supabase/functions/fetch-fiskal/parse.js";
 import { buildSingle, OUT as SINGLE_OUT } from "../../scripts/build-fetch-fiskal-single.mjs";
@@ -190,6 +191,31 @@ await t.section("audit thumbnail: konversi, yatim, rusak", async () => {
   t.ok(!r.files.some((x) => x.path === ".emptyFolderPlaceholder"), "penanda folder Supabase diabaikan");
   t.ok(r.broken.length === 1 && r.broken[0].article.id === 5, "thumbnail yang filenya hilang terdeteksi; URL luar bukan urusan bucket");
   t.ok(r.webpCount === 1 && r.files.length === 9, "ringkasan jumlah file & WEBP");
+});
+
+await t.section("data saham & indeks: validasi, peringkat, format", async () => {
+  const q = (o) => ({ symbol: "BBCA.JK", name: "Bank Central Asia", group: "saham", price: 5050, prev: 4930, dp: 0, volume: 1000, spark: [1, 2, null, "x", 3], ...o });
+  const n = mk.normalizeQuote(q());
+  t.ok(n && n.code === "BBCA" && Math.abs(n.pct - 2.434) < 0.001 && n.change === 120, "kutipan valid: kode, perubahan, persen dihitung ulang");
+  t.eq(n.spark, [1, 2, 3], "titik sparkline cacat dibuang");
+  for (const bad of [q({ symbol: "javascript:alert(1)" }), q({ symbol: "<x>" }), q({ price: -1 }), q({ price: "5050" }), q({ name: "" }), q({ group: "lain" }), null, "x"]) {
+    t.eq(mk.normalizeQuote(bad), null, `ditolak: ${JSON.stringify(bad && bad.symbol)} ${JSON.stringify(bad && bad.price)}`);
+  }
+  t.eq(mk.normalizeQuote(q({ prev: 0 })).pct, null, "tanpa penutupan sebelumnya -> persen kosong, bukan Infinity");
+  const s = mk.normalizeSummary({ updated_at: "bukan tanggal", items: [q(), q({ symbol: "BBRI.JK", price: 10, prev: 20 }), q({ group: "dunia", symbol: "^GSPC", region: "Mars" }), { evil: 1 }] });
+  t.ok(s.all.length === 3 && s.byGroup.saham.length === 2 && s.updatedAt === null && s.byGroup.dunia[0].region === null, "ringkasan dikelompokkan; kawasan/tanggal asing dibuang");
+  const list = [q({ symbol: "A.JK", price: 110, prev: 100, volume: 10 }), q({ symbol: "B.JK", price: 90, prev: 100, volume: 1000 }), q({ symbol: "C.JK", price: 100, prev: 100, volume: null }), q({ symbol: "D.JK", price: 130, prev: 100, volume: 5 })].map(mk.normalizeQuote);
+  t.eq(mk.rankStocks(list, "gainers").map((x) => x.code), ["D", "A"], "naik tertinggi");
+  t.eq(mk.rankStocks(list, "losers").map((x) => x.code), ["B"], "turun terdalam");
+  t.eq(mk.rankStocks(list, "active").map((x) => x.code), ["B", "A", "D"], "teraktif menurut nilai; tanpa volume tidak ikut");
+  t.eq(mk.sortBy(list, "volume", "desc").map((x) => x.code), ["B", "A", "D", "C"], "urut volume; kosong di bawah");
+  t.eq(mk.breadth(list), { up: 2, down: 1, flat: 1 }, "luas pasar");
+  t.eq([mk.fmtPct(1.234), mk.fmtPct(-0.5), mk.fmtPct(null), mk.fmtChange(-12.5, 1), mk.fmtNum(5016.157, 2)], ["+1,23%", "−0,50%", "—", "−12,5", "5.016,16"], "format id-ID");
+  t.eq(mk.fmtStamp(1793844000, 25200, "1d"), "09.00", "jam pada zona bursa (WIB), bukan zona peramban");
+  t.ok(/^M2 30 L50 2 L98 30$/.test(mk.sparkPath([1, 2, 1], 100, 32)) && mk.sparkPath([1]) === "", "jalur sparkline", mk.sparkPath([1, 2, 1], 100, 32));
+  const g = mk.chartGeometry([10, 12, 11], 9, 1000, 300, 0);
+  t.ok(g && g.baseY === 300 && g.xs.length === 3 && g.xs[2] === 100 && g.ticks[0].value === 12, "geometri grafik menyertakan garis acuan");
+  t.eq(mk.normalizeChart({ points: [[2, 5], [1, 4], ["x", 1], [3, -1]], gmtoffset: 99999999 }), { points: [[1, 4], [2, 5]], base: 4, gmtoffset: 0 }, "deret grafik divalidasi & diurutkan");
 });
 
 process.exit(t.summary() ? 0 : 1);

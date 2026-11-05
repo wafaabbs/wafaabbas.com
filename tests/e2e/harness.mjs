@@ -21,6 +21,48 @@ export function marketFixture(u) {
   if (fx && FX[fx[1]]) return FX[fx[1]].map((rate, i) => ({ date: `2026-10-${29 + i}`, base: fx[1], quote: "IDR", rate }));
   const m = u.match(/currency-api@(latest|[\d-]+)\/v1\/currencies\/(xau|xag)\.min\.json$/);
   if (m) return { date: m[1] === "latest" ? "2026-11-01" : m[1], [m[2]]: { idr: METAL[m[1] === "latest" ? "latest" : "prev"][m[2]] } };
+  return stocksFixture(u);
+}
+
+// Data pasar saham palsu (BUKAN data nyata) untuk Edge Function market-data (services/stocks.js).
+const T0 = 1793844000;
+const wave = (base, n, drift) => Array.from({ length: n }, (_, i) => +(base * (1 + drift * (i / (n - 1)) + 0.004 * Math.sin(i))).toFixed(2));
+const Q = (symbol, name, group, price, prev, extra = {}) => ({ symbol, name, group, price, prev, dp: group === "saham" ? 0 : 2, high: price * 1.01, low: prev * 0.99,
+  high52: price * 1.6, low52: price * 0.9, volume: group === "saham" ? Math.round(1e7 + price * 1000) : null, time: T0 + 3600, open: true,
+  spark: wave(prev, 20, (price - prev) / prev), ...extra });
+const STOCKS_SUMMARY = {
+  updated_at: "2026-11-05T03:00:00.000Z", source: "Yahoo Finance",
+  items: [
+    Q("^JKSE", "IHSG", "domestik", 5016.16, 4919.77, { note: "IDX Composite" }),
+    Q("^JKLQ45", "LQ45", "domestik", 513.08, 501.24),
+    Q("^JKII", "Jakarta Islamic Index", "domestik", 289.91, 291.87),
+    Q("IDXENERGY.JK", "Energi", "sektor", 2327.29, 2315.21),
+    Q("IDXFINANCE.JK", "Keuangan", "sektor", 1190.5, 1200.98),
+    Q("IDXBASIC.JK", "Barang Baku", "sektor", 1274.17, 1229.61),
+    Q("BBCA.JK", "Bank Central Asia", "saham", 5050, 4930),
+    Q("BBRI.JK", "Bank Rakyat Indonesia", "saham", 2730, 2800),
+    Q("TLKM.JK", "Telkom Indonesia", "saham", 1995, 1995),
+    Q("GOTO.JK", "GoTo Gojek Tokopedia", "saham", 25, 24),
+    Q("ANTM.JK", "<img src=x onerror=window.__pwned=1>", "saham", 2730, 2600),
+    Q("javascript:alert(1)", "Simbol jahat", "saham", 1, 1),
+    Q("XXXX.JK", "Harga cacat", "saham", -5, 10),
+    Q("^GSPC", "S&P 500", "dunia", 7688.62, 7568.92, { region: "Amerika", note: "AS", open: false }),
+    Q("^N225", "Nikkei 225", "dunia", 51000.5, 51500, { region: "Asia-Pasifik", note: "Jepang" }),
+    Q("^FTSE", "FTSE 100", "dunia", 9700, 9650, { region: "Eropa", note: "Inggris", open: false }),
+    Q("IDR=X", "USD/IDR", "komoditas", 18140, 18100, { dp: 0, note: "rupiah per dolar AS" }),
+    Q("GC=F", "Emas", "komoditas", 4146.1, 4073, { note: "USD per troy ons" }),
+  ],
+};
+function stocksFixture(u) {
+  const m = u.match(/^https:\/\/[a-z0-9]+\.supabase\.co\/functions\/v1\/market-data\?(.*)$/);
+  if (!m) return null;
+  const p = new URLSearchParams(m[1]);
+  if (p.get("view") === "summary") return STOCKS_SUMMARY;
+  if (p.get("view") === "chart") {
+    const n = p.get("range") === "1d" ? 30 : 60;
+    const vals = wave(4919.77, n, p.get("range") === "1y" ? -0.2 : 0.02);
+    return { symbol: p.get("symbol"), range: p.get("range"), gmtoffset: 25200, base: 4919.77, points: vals.map((v, i) => [T0 + i * 300, v]) };
+  }
   return null;
 }
 

@@ -209,9 +209,45 @@ try {
     t.ok(/belum diaktifkan/i.test(await b.eval(`document.querySelector('#xnews-root').innerText`)), "migrasi 003 belum jalan -> pesan jelas, bukan galat");
   });
 
+  await t.section("Investasi: data pasar saham & indeks", async () => {
+    await b.open("/investasi.html", { seed: seed(), width: 1366, height: 900 });
+    await b.waitFor(`!!document.querySelector('#inv-root .inv-hero') && !!document.querySelector('#inv-chart [data-plot]')`);
+    if (SHOTS) await b.screenshot(path.join(SHOTS, "investasi-1366.png"));
+    t.ok(/IHSG/.test(await b.eval(`document.getElementById('inv-hero-h').textContent`)), "IHSG tampil sebagai indeks utama");
+    t.ok(/5\.016,16/.test(await b.eval(`document.querySelector('.inv-hero__price').textContent`)), "harga berformat Indonesia");
+    t.eq(await b.eval(`window.__pwned`), 0, "nama dari data luar tidak dieksekusi");
+    t.ok(await b.eval(`!document.querySelector('#inv-root img')`), "tanpa elemen dari HTML data luar");
+    t.ok(!(await b.eval(`document.getElementById('inv-root').innerText`)).match(/Simbol jahat|Harga cacat/), "butir dengan simbol/harga cacat dibuang");
+    t.eq(await b.eval(`[...document.querySelectorAll('#inv-stocks tbody .inv-code')].map(e=>e.textContent).join()`), "ANTM,GOTO,BBCA", "tab Naik tertinggi: urut % turun, hanya yang naik");
+    await b.click(`[data-tab="losers"]`);
+    t.eq(await b.eval(`[...document.querySelectorAll('#inv-stocks tbody .inv-code')].map(e=>e.textContent).join()`), "BBRI", "tab Turun terdalam");
+    await b.click(`[data-tab="all"]`);
+    await b.click(`[data-sort="code"]`);
+    t.eq(await b.eval(`[...document.querySelectorAll('#inv-stocks tbody .inv-code')].map(e=>e.textContent).join()`), "ANTM,BBCA,BBRI,GOTO,TLKM", "tab Semua dapat diurutkan per kode");
+    t.eq(await b.eval(`document.querySelector('th[aria-sort="ascending"]') !== null`), true, "aria-sort pada kolom terurut");
+    await b.click(`[data-range="1y"]`);
+    await b.waitFor(`document.querySelector('[data-range="1y"]').getAttribute('aria-pressed') === 'true' && !!document.querySelector('#inv-chart .inv-chart--down')`);
+    t.ok(true, "rentang grafik 1T dimuat (tren turun diberi warna turun)");
+    await b.eval(`document.querySelector('[data-plot]').focus()`);
+    await b.key("ArrowLeft");
+    t.ok(await b.eval(`!document.querySelector('[data-tip]').hidden && /·/.test(document.querySelector('[data-tip]').textContent)`), "grafik bisa dibaca dengan keyboard");
+    await b.click(`[data-symbol="^JKLQ45"]`);
+    await b.waitFor(`/LQ45/.test(document.getElementById('inv-hero-h').textContent) && !!document.querySelector('#inv-chart [data-plot]')`);
+    t.ok(true, "memilih indeks domestik mengganti indeks utama & grafiknya");
+    t.ok(await b.eval(`document.querySelectorAll('.inv-heat__tile').length === 3 && document.querySelectorAll('.inv-world__list li').length === 3 && document.querySelectorAll('.inv-card').length === 2`), "sektor, indeks dunia, komoditas tampil");
+    t.ok(await b.eval(`[...document.querySelectorAll('.inv-foot a')].every(a=>a.target==='_blank' && /noopener/.test(a.rel))`), "tautan sumber resmi di tab baru");
+    t.eq(b.state.errors.length, 0, "tanpa error konsol", b.state.errors.join(" | "));
+    await b.open("/investasi.html", { seed: seed({ extra: "const __f=window.fetch;window.fetch=(u,o)=>String(u).includes('market-data')?Promise.resolve(new Response('{}',{status:404})):__f(u,o);" }) });
+    await b.waitFor(`!!document.querySelector('#inv-root .state')`);
+    t.ok(/belum aktif/i.test(await b.eval(`document.getElementById('inv-root').innerText`)), "fungsi belum di-deploy -> pesan jelas, bukan galat");
+    await b.open("/investasi.html", { seed: seed({ extra: "const __f=window.fetch;window.fetch=(u,o)=>String(u).includes('market-data')?Promise.reject(new TypeError('Failed to fetch')):__f(u,o);" }) });
+    await b.waitFor(`!!document.querySelector('#inv-root .state--error [data-retry]')`);
+    t.ok(true, "jaringan gagal -> galat dengan tombol coba lagi");
+  });
+
   await t.section("Matriks viewport: tanpa overflow horizontal, header ringkas, judul tidak terpotong", async () => {
     for (const [w, h] of [[1440, 900], [1366, 768], [1280, 800], [1024, 768], [768, 1024], [390, 844], [360, 800]]) {
-      for (const p of ["/index.html", "/article.html", "/article.html?slug=artikel-5", "/category.html?slug=pajak", "/about.html", "/contact.html", "/alat.html", "/kalkulator-pajak.html", "/kabar-fiskal.html"]) {
+      for (const p of ["/index.html", "/article.html", "/article.html?slug=artikel-5", "/category.html?slug=pajak", "/about.html", "/contact.html", "/alat.html", "/kalkulator-pajak.html", "/kabar-fiskal.html", "/investasi.html"]) {
         await b.open(p, { seed: seed(), width: w, height: h, mobile: w < 800 });
         await b.settle(450);
         const m = await b.eval(`({sw: document.documentElement.scrollWidth, hdr: document.getElementById('site-header').getBoundingClientRect().height, logo: document.querySelector('#site-header img').getBoundingClientRect().width})`);
@@ -475,7 +511,7 @@ try {
     await b.key("Escape");
     await b.settle(200);
     if (SHOTS) await b.screenshot(path.join(SHOTS, "home-mobile.png"));
-    for (const p of ["/article.html", "/article.html?slug=artikel-3", "/category.html?slug=pajak", "/about.html", "/contact.html", "/alat.html", "/kalkulator-pajak.html", "/kabar-fiskal.html"]) {
+    for (const p of ["/article.html", "/article.html?slug=artikel-3", "/category.html?slug=pajak", "/about.html", "/contact.html", "/alat.html", "/kalkulator-pajak.html", "/kabar-fiskal.html", "/investasi.html"]) {
       await b.open(p, { seed: seed(), width: 360, height: 800, mobile: true });
       await b.settle(500);
       t.ok(await b.eval(`document.documentElement.scrollWidth <= window.innerWidth + 1`), `${p} tanpa scroll horizontal (360px)`, String(await b.eval(`document.documentElement.scrollWidth`)));

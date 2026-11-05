@@ -20,7 +20,7 @@ export const SUPABASE = {
     articleComments: "article_comments",
     commentLikes: "comment_likes",
   },
-  functions: { fetchFiskal: "fetch-fiskal" },
+  functions: { fetchFiskal: "fetch-fiskal", marketData: "market-data" },
   buckets: { thumbnails: "thumbnails" },
 };
 
@@ -64,6 +64,7 @@ export const FALLBACK_MENUS = {
     { label: "Artikel", url: "article.html" },
     { label: "Peralatan", url: "alat.html" },
     { label: "Berita", url: "kabar-fiskal.html" },
+    { label: "Investasi", url: "investasi.html" },
     { label: "Tentang", url: "about.html" },
     { label: "Kontak", url: "contact.html" },
   ],

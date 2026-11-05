@@ -9,13 +9,14 @@ Situs edukasi akuntansi, perpajakan, dan keuangan oleh Wafa Abbas. HTML + CSS + 
 - **Peralatan** (`alat.html`) dengan **Kalkulator Pajak** (`kalkulator-pajak.html`; rumus di `core/tax.js`).
 - **Pencarian teks penuh** artikel (judul, ringkasan, isi; urutan relevansi; "frasa" & -pengecualian) lewat `search_articles` (migrasi 004), dengan cadangan judul + ringkasan.
 - **Kabar Fiskal** (`kabar-fiskal.html`): tautan otomatis dari fiskal.kemenkeu.go.id lewat Edge Function `supabase/functions/fetch-fiskal` (lihat `supabase/README.md`).
+- **Investasi** (`investasi.html`): IHSG & indeks BEI dengan grafik 1H–5T, indeks sektoral, saham pilihan (naik/turun/teraktif/semua), indeks dunia, komoditas & kurs. Data tertunda dari Edge Function `supabase/functions/market-data` (lihat `supabase/README.md`).
 - **Suka & komentar artikel** bergaya Instagram (migrasi 005): suka artikel & komentar, balasan satu tingkat yang bisa dibuka/tutup dan dimuat bertahap, komentar panjang "selengkapnya", tanda "Penulis". Pembaca memakai sesi anonim Supabase (tanpa daftar). Moderasi di `/admin/comments.html`.
 - **Admin** (`/admin/`): ringkasan, artikel (editor markdown + pratinjau, unggah thumbnail, slot unggulan), kategori, **Menu Manager**, **Page Manager**, konten beranda (unggulan & banner), moderasi komentar.
 
 ## Struktur
 
 ```
-index.html article.html category.html page.html about.html contact.html alat.html kalkulator-pajak.html kabar-fiskal.html tools.html (alih ke alat.html) 404.html
+index.html article.html category.html page.html about.html contact.html alat.html kalkulator-pajak.html kabar-fiskal.html investasi.html tools.html (alih ke alat.html) 404.html
 admin/                 login, dashboard, posts, editor, categories, menus, pages, home, external, comments  (semua noindex)
 assets/css/            tokens → base → layout → components → pages → theme-dark   (+ admin.css untuk panel)
 assets/fonts/          Plus Jakarta Sans & Newsreader (OFL, self-hosted)

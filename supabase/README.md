@@ -13,6 +13,7 @@ sebaiknya pertama di proyek **staging** (salinan proyek) lalu produksi.
 | `migrations/004_article_search.sql` | Pencarian teks penuh artikel: kolom `articles.search_tsv` (dihitung otomatis dari judul > ringkasan > isi, kamus `indonesian` sehingga "perpajakan" cocok dengan "pajak"), indeks GIN, fungsi `search_articles()` (urutan relevansi, "frasa", -pengecualian, cuplikan). Hanya artikel terbit. Sebelum dijalankan, situs memakai pencarian judul + ringkasan. Butuh 002. |
 | `migrations/005_article_engagement.sql` | Suka & komentar artikel: `article_stats` (penghitung), `article_likes`, `article_comments` (balasan satu tingkat), `comment_likes`. Pembaca memakai sesi anonim Supabase; hanya bisa menulis/menghapus miliknya sendiri, penghitung dijaga trigger, maks. 5 komentar/menit, admin bertanda "Penulis" dan bisa menyembunyikan/menghapus. Butuh 002 + sesi anonim diizinkan (lihat bagian di bawah). |
 | `functions/fetch-fiskal/` | Edge Function pengambil tautan (`index.ts`) + pembaca HTML murni (`parse.js`, diuji di `tests/unit`). `index.single.ts` = gabungan keduanya untuk editor Dashboard (dibangkitkan oleh `scripts/build-fetch-fiskal-single.mjs`). |
+| `functions/market-data/` | Edge Function data pasar untuk `investasi.html` (satu berkas `index.ts`, tanpa database & tanpa rahasia). Lihat bagian **Investasi** di bawah. |
 | `verify/00_snapshot.sql` | Read-only. Potret kebijakan & grant sebelum perubahan (dasar rollback). |
 | `verify/01_verify_after_002.sql` | Read-only. Simulasi anon / non-admin / admin dalam transaksi yang di-rollback. |
 | `rollback/` | Cara membatalkan (lihat README di sana). |
@@ -114,3 +115,26 @@ pembaca diarahkan ke situs sumber. Sebelum langkah di bawah dijalankan, halaman 
 Perilaku fungsi: hanya membaca halaman pertama tiap sumber (±30 butir maks.), jeda 0,8 detik antar-sumber, identitas
 User-Agent jelas, tidak pernah menghapus data. Bila situs sumber mengubah tata letak, pembaca mengembalikan 0 butir dan
 status sumber menjadi "kosong" — data lama tetap tampil. Perbaiki pembaca di `functions/fetch-fiskal/parse.js` (ada uji unitnya).
+
+## Investasi (Edge Function `market-data`)
+
+Halaman `investasi.html` (IHSG & indeks BEI, indeks sektoral, saham pilihan, indeks dunia, komoditas & kurs) mengambil data dari
+fungsi ini. Tidak butuh migrasi, tabel, maupun rahasia. Sebelum fungsi di-deploy, halaman menampilkan "Data pasar belum aktif".
+
+1. **Deploy** (dari akar repo):
+   ```
+   npx supabase functions deploy market-data --no-verify-jwt --project-ref sjgsrposlucbkabxaodm
+   ```
+   Tanpa CLI: Dashboard → **Edge Functions → Deploy a new function → Via Editor**, nama persis `market-data`, salin seluruh isi
+   `functions/market-data/index.ts` (sudah satu berkas), deploy, lalu **matikan "Enforce JWT verification"**.
+2. **Uji**: buka `https://sjgsrposlucbkabxaodm.supabase.co/functions/v1/market-data?view=summary` → JSON berisi `items`.
+   Grafik: `?view=chart&symbol=%5EJKSE&range=1mo` (range: 1d, 5d, 1mo, 6mo, 1y, 5y).
+
+Catatan:
+- Sumber: endpoint grafik publik **Yahoo Finance** (tidak resmi, tanpa key). Data BEI tertunda ±10–15 menit; bentuk respons bisa
+  berubah sewaktu-waktu. Bila itu terjadi, halaman menampilkan pesan galat dan data cache terakhir tetap dipakai (maks. 1 hari).
+- Publik tanpa JWT itu aman: fungsi hanya menerima GET, hanya mengambil simbol dari daftar putih `CATALOG` di `index.ts`
+  (tidak bisa dipakai sebagai proxy bebas), dan menyimpan hasil di memori (ringkasan 5 menit, grafik 5 menit–12 jam) sehingga
+  sumber tidak dibebani walau banyak pengunjung.
+- Menambah/mengurangi saham atau indeks: ubah `CATALOG` di `functions/market-data/index.ts` lalu deploy ulang. Kode saham BEI
+  memakai akhiran `.JK` (mis. `BBCA.JK`).
