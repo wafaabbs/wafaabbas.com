@@ -2,7 +2,7 @@
 
 import { html, setHtml } from "../../core/dom.js";
 import { formatDateShort, pageCount } from "../../core/format.js";
-import { pathTo } from "../../core/url.js";
+import { pathTo, safeImageUrl } from "../../core/url.js";
 import * as articles from "../../services/articles.js";
 import { errorState } from "../../components/states.js";
 import { bootAdmin } from "./shell.js";
@@ -31,8 +31,9 @@ async function load() {
     </form>
     ${data.items.length ? html`<div class="table-wrap"><table class="table">
       <caption class="visually-hidden">Daftar artikel</caption>
-      <thead><tr><th scope="col">Judul</th><th scope="col">Kategori</th><th scope="col">Status</th><th scope="col">Diubah</th><th scope="col"><span class="visually-hidden">Aksi</span></th></tr></thead>
+      <thead><tr><th scope="col" class="table__thumb"><span class="visually-hidden">Thumbnail</span></th><th scope="col">Judul</th><th scope="col">Kategori</th><th scope="col">Status</th><th scope="col">Diubah</th><th scope="col"><span class="visually-hidden">Aksi</span></th></tr></thead>
       <tbody>${data.items.map((a) => html`<tr>
+        <td class="table__thumb">${thumbCell(a.thumbnail_url)}</td>
         <th scope="row">${a.title}</th>
         <td>${a.category ? a.category.name : "—"}</td>
         <td><span class="badge ${a.status === "published" ? "badge--published" : "badge--draft"}">${a.status === "published" ? "Terbit" : "Draft"}</span></td>
@@ -47,6 +48,13 @@ async function load() {
       <button type="button" class="btn btn--outline btn--sm" data-page="${q.page - 1}" ${q.page <= 1 ? "disabled" : ""}>← Sebelumnya</button>
       <span>Halaman ${q.page} dari ${pages}</span>
       <button type="button" class="btn btn--outline btn--sm" data-page="${q.page + 1}" ${q.page >= pages ? "disabled" : ""}>Berikutnya →</button></nav>` : ""}`);
+}
+
+function thumbCell(url) {
+  const safe = safeImageUrl(url || "");
+  return safe
+    ? html`<a class="post-thumb" href="${safe}" target="_blank" rel="noopener" title="Buka thumbnail ukuran penuh"><img src="${safe}" alt="" loading="lazy" decoding="async"></a>`
+    : html`<span class="post-thumb post-thumb--empty" title="Belum ada thumbnail">—</span>`;
 }
 
 root.addEventListener("submit", (e) => {
