@@ -347,6 +347,27 @@ try {
     t.ok((await rows("featured_posts")).some((f) => f.position === 2 && String(f.article_id) === String(a.id)), "slot unggulan tersimpan");
     await b.open("/admin/editor.html", { seed: "", clearStorage: false });
     await b.waitFor(`document.getElementById('article-form')`);
+    await b.type(`#a-title`, "Dengan Thumbnail Unggah");
+    await b.eval(`(async () => {
+      const c = document.createElement('canvas'); c.width = 3200; c.height = 2000;
+      const g = c.getContext('2d'); for (let i = 0; i < 400; i++) { g.fillStyle = 'hsl(' + i * 37 + ',70%,50%)'; g.fillRect((i * 97) % 3200, (i * 53) % 2000, 300, 200); }
+      const png = await new Promise((r) => c.toBlob(r, 'image/png'));
+      window.__PNG_SIZE = png.size;
+      const input = document.getElementById('a-file'), dt = new DataTransfer();
+      dt.items.add(new File([png], 'besar.png', { type: 'image/png' })); input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+    await b.click(`#a-save`);
+    await b.waitFor(`(window.__UPLOADS || []).length`);
+    const up = await b.eval(`(async () => { const u = window.__UPLOADS[0], bm = await createImageBitmap(u.body);
+      return { name: u.name, type: u.body.type, contentType: u.contentType, size: u.body.size, w: bm.width, h: bm.height, png: window.__PNG_SIZE }; })()`);
+    t.ok(up.type === "image/webp" && up.contentType === "image/webp" && /\.webp$/.test(up.name), "unggahan diubah ke WEBP", JSON.stringify(up));
+    t.ok(up.w === 1600 && up.h === 1000, "sisi terpanjang dikecilkan ke 1600px, rasio tetap", JSON.stringify(up));
+    t.ok(up.size < up.png, "hasil lebih kecil dari PNG asli", JSON.stringify(up));
+    await b.waitFor(`/Ubah artikel/.test(document.querySelector('h1').textContent)`);
+    t.ok((await rows("articles")).some((x) => x.slug === "dengan-thumbnail-unggah" && x.thumbnail_url.endsWith(up.name)), "thumbnail_url menunjuk file WEBP");
+    await b.open("/admin/editor.html", { seed: "", clearStorage: false });
+    await b.waitFor(`document.getElementById('article-form')`);
     await b.type(`#a-title`, "Dengan Thumbnail JS");
     await b.type(`#a-thumb`, "javascript:alert(1)");
     await b.click(`#a-save`);
@@ -363,8 +384,62 @@ try {
     t.ok(await b.eval(`![...document.getElementById('c-parent').options].some(o=>/PPh 21/.test(o.textContent))`), "parent kategori tidak menawarkan turunannya sendiri (cegah siklus)");
   });
 
+  await t.section("Media: thumbnail lama -> WEBP, file yatim, thumbnail rusak", async () => {
+    const U = (p) => "https://fake.supabase.test/storage/v1/object/public/thumbnails/" + p;
+    const old = "2026-10-01T00:00:00Z";
+    const extra = `window.__DB.articles.find(a=>a.id===1).thumbnail_url=${JSON.stringify(U("lama.png"))};
+      window.__DB.articles.find(a=>a.id===2).thumbnail_url=${JSON.stringify(U("lama.png"))};
+      window.__DB.articles.find(a=>a.id===3).thumbnail_url=${JSON.stringify(U("foto.jpg"))};
+      window.__DB.articles.find(a=>a.id===4).content+=${JSON.stringify("\n\n![foto](" + U("foto.jpg") + ")")};
+      window.__DB.articles.find(a=>a.id===5).thumbnail_url=${JSON.stringify(U("hilang.png"))};
+      window.__DB.articles.find(a=>a.id===6).thumbnail_url=${JSON.stringify(U("sudah.webp"))};
+      window.__BUCKET=[{path:"lama.png",mimetype:"image/png",size:900000,created_at:"${old}",w:2400,h:1200},
+        {path:"foto.jpg",mimetype:"image/jpeg",size:300000,created_at:"${old}",w:1000,h:800},
+        {path:"sudah.webp",mimetype:"image/webp",size:50000,created_at:"${old}"},
+        {path:"yatim.png",mimetype:"image/png",size:70000,created_at:"${old}"},
+        {path:"baru.png",mimetype:"image/png",size:70000,created_at:new Date().toISOString()}];`;
+    await b.open("/admin/media.html", { seed: admin(extra) });
+    await b.waitFor(`document.getElementById('n-convert')`);
+    t.ok(await b.eval(`!!document.querySelector('.admin__nav a[aria-current="page"][href="./media.html"]')`), "menu Media ada & aktif di sidebar");
+    t.ok(await b.eval(`document.getElementById('n-convert').textContent`) === "2", "2 file thumbnail perlu diubah (lama.png dipakai 2 artikel, dihitung sekali)");
+    t.ok(await b.eval(`[...document.querySelectorAll('[data-orphan]')].map(c=>c.dataset.orphan).join()`) === "yatim.png", "hanya yatim.png ditawarkan; baru.png (baru diunggah) & foto.jpg (di isi artikel) aman");
+    t.ok(/Artikel 5/.test(await b.eval(`document.getElementById('h-broken').parentElement.textContent`)), "thumbnail rusak (file hilang) ditampilkan");
+
+    await b.click(`[data-convert]`);
+    await b.waitFor(`document.getElementById('n-convert') && document.getElementById('n-convert').textContent === '0'`, 15000);
+    const ups = await b.eval(`Promise.all(window.__UPLOADS.map(async u => { const bm = await createImageBitmap(u.body); return { name: u.name, type: u.body.type, w: bm.width, h: bm.height }; }))`);
+    t.ok(ups.length === 2 && ups.every((u) => u.type === "image/webp" && /\.webp$/.test(u.name)), "kedua file diunggah ulang sebagai WEBP", JSON.stringify(ups));
+    t.ok(ups.some((u) => u.w === 1600 && u.h === 800), "gambar besar dikecilkan ke 1600px", JSON.stringify(ups));
+    const arts = await rows("articles"), byId = (id) => arts.find((a) => a.id === id);
+    t.ok(byId(1).thumbnail_url === byId(2).thumbnail_url && /\.webp$/.test(byId(1).thumbnail_url), "kedua artikel pemakai lama.png menunjuk WEBP yang sama");
+    t.ok(/\.webp$/.test(byId(3).thumbnail_url) && byId(6).thumbnail_url === U("sudah.webp"), "foto.jpg diganti; yang sudah WEBP tidak disentuh");
+    const files = await b.eval(`window.__BUCKET.map(f=>f.path)`);
+    t.ok(!files.includes("lama.png"), "file lama dihapus setelah artikel diarahkan ke WEBP");
+    t.ok(files.includes("foto.jpg"), "file lama yang masih disebut di isi artikel TIDAK dihapus");
+
+    await b.click(`[data-del-orphans]`);
+    await b.click(`[data-choice="__ok"]`);
+    await b.waitFor(`document.getElementById('n-orphan') && document.getElementById('n-orphan').textContent === '0'`);
+    const after = await b.eval(`window.__BUCKET.map(f=>f.path)`);
+    t.ok(!after.includes("yatim.png") && after.includes("baru.png") && after.includes("foto.jpg"), "hanya file yatim terpilih yang dihapus", JSON.stringify(after));
+
+    await b.click(`[data-clear-broken]`);
+    await b.click(`[data-choice="__ok"]`);
+    await b.waitFor(`document.getElementById('n-convert') && !document.getElementById('h-broken')`);
+    t.ok((await rows("articles")).find((a) => a.id === 5).thumbnail_url === null, "thumbnail rusak dikosongkan");
+  });
+
+  await t.section("Media: hapus ditolak RLS -> pesan jelas", async () => {
+    await b.open("/admin/media.html", { seed: admin(`window.__BUCKET=[{path:"yatim.png",mimetype:"image/png",size:1,created_at:"2026-01-01T00:00:00Z"}];window.__DENY_WRITES=true;`) });
+    await b.waitFor(`document.querySelector('[data-del-orphans]')`);
+    await b.click(`[data-del-orphans]`);
+    await b.click(`[data-choice="__ok"]`);
+    await b.waitFor(`/Hanya 0 dari 1 file/.test(document.querySelector('.toast-region') && document.querySelector('.toast-region').textContent)`);
+    t.ok(true, "galat RLS diteruskan, bukan sukses palsu");
+  });
+
   await t.section("Admin mobile", async () => {
-    for (const p of ["/admin/menus.html", "/admin/pages.html", "/admin/posts.html", "/admin/dashboard.html"]) {
+    for (const p of ["/admin/menus.html", "/admin/pages.html", "/admin/posts.html", "/admin/dashboard.html", "/admin/media.html"]) {
       await b.open(p, { seed: admin(), width: 360, height: 800, mobile: true });
       await b.settle(700);
       t.ok(await b.eval(`document.documentElement.scrollWidth <= window.innerWidth + 1`), `${p} tanpa scroll horizontal (360px)`, String(await b.eval(`document.documentElement.scrollWidth`)));

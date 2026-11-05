@@ -60,7 +60,7 @@ async function render() {
             <button type="button" class="btn btn--ghost btn--sm" id="thumb-clear">Hapus thumbnail</button>
             <label class="visually-hidden" for="a-thumb">URL thumbnail</label>
             <input id="a-thumb" name="thumbnail_url" type="url" inputmode="url" placeholder="atau tempel URL https://…" value="${article.thumbnail_url || ""}">
-            <p class="field__hint">JPG, PNG, atau WEBP, maksimal 5 MB.</p>
+            <p class="field__hint">JPG, PNG, atau WEBP, maksimal 20 MB. Otomatis dikecilkan dan diubah ke WEBP saat disimpan.</p>
           </div>
         </div>
       </fieldset>

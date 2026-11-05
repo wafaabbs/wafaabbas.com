@@ -16,6 +16,7 @@ const NAV = [
   { id: "menus", href: "menus.html", label: "Menu" },
   { id: "pages", href: "pages.html", label: "Halaman" },
   { id: "home", href: "home.html", label: "Beranda" },
+  { id: "media", href: "media.html", label: "Media" },
   { id: "external", href: "external.html", label: "Kabar Fiskal" },
   { id: "comments", href: "comments.html", label: "Komentar" },
 ];

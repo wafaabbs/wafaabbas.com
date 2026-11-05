@@ -227,12 +227,37 @@
     onAuthStateChange(cb) { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
   };
 
+  // Bucket di memori (tidak bertahan antar-navigasi): window.__BUCKET = [{ path, mimetype, size, created_at, w?, h?, body? }].
+  // Objek tanpa `body` diunduh sebagai PNG w x h buatan.
+  const bucketFiles = () => (window.__BUCKET = window.__BUCKET || []);
   const storage = {
     from() {
       return {
-        async upload(name) { (window.__UPLOADS = window.__UPLOADS || []).push(name); return { data: { path: name }, error: null }; },
+        async upload(name, body, opts) {
+          (window.__UPLOADS = window.__UPLOADS || []).push({ name, body, contentType: opts && opts.contentType });
+          bucketFiles().push({ path: name, body, mimetype: opts && opts.contentType, size: body.size, created_at: new Date().toISOString() });
+          return { data: { path: name }, error: null };
+        },
         getPublicUrl(p) { return { data: { publicUrl: "https://fake.supabase.test/storage/v1/object/public/thumbnails/" + p } }; },
-        async remove(paths) { (window.__REMOVED = window.__REMOVED || []).push(...paths); return { data: paths, error: null }; },
+        async remove(paths) {
+          (window.__REMOVED = window.__REMOVED || []).push(...paths);
+          if (window.__DENY_WRITES) return { data: [], error: null };          // seperti RLS: tanpa error, tanpa baris
+          window.__BUCKET = bucketFiles().filter((f) => !paths.includes(f.path));
+          return { data: paths.map((name) => ({ name })), error: null };
+        },
+        async list(prefix, { limit = 100, offset = 0 } = {}) {
+          const items = bucketFiles().filter((f) => !prefix || f.path.startsWith(prefix + "/")).sort((a, b) => a.path.localeCompare(b.path)).slice(offset, offset + limit)
+            .map((f) => ({ id: f.path, name: prefix ? f.path.slice(prefix.length + 1) : f.path, created_at: f.created_at, metadata: { size: f.size, mimetype: f.mimetype } }));
+          return { data: items, error: null };
+        },
+        async download(path) {
+          const f = bucketFiles().find((x) => x.path === path);
+          if (!f) return { data: null, error: { message: "Object not found" } };
+          if (f.body) return { data: f.body, error: null };
+          const c = new OffscreenCanvas(f.w || 800, f.h || 600), g = c.getContext("2d");
+          for (let i = 0; i < 200; i++) { g.fillStyle = "hsl(" + i * 37 + ",70%,50%)"; g.fillRect((i * 97) % c.width, (i * 53) % c.height, 150, 100); }
+          return { data: await c.convertToBlob({ type: f.mimetype || "image/png" }), error: null };
+        },
       };
     },
   };

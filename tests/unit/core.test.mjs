@@ -5,6 +5,7 @@ import { slugify, pageCount, truncate } from "../../core/format.js";
 import { html, raw, esc } from "../../core/dom.js";
 import { lastTwo, perGram, trendOf } from "../../services/markets.js";
 import * as tax from "../../core/tax.js";
+import { audit, bucketPathsIn, ORPHAN_GRACE_MS } from "../../core/thumbnail-audit.js";
 import * as fk from "../../supabase/functions/fetch-fiskal/parse.js";
 import { buildSingle, OUT as SINGLE_OUT } from "../../scripts/build-fetch-fiskal-single.mjs";
 import { readFileSync } from "node:fs";
@@ -158,6 +159,37 @@ await t.section("Kabar Fiskal: pembaca HTML sumber", async () => {
   t.eq([fk.dateFromText("31 Februari 2026"), fk.dateFromText("9 Okt 2026"), fk.dateFromPath("/baca/2026/13/01/x")].join(","), ",2026-10-09,", "tanggal tidak sah ditolak");
   t.eq(fk.absolute("//fiskal.kemenkeu.go.id.evil.example/a"), null, "host menyerupai ditolak");
   t.ok(readFileSync(SINGLE_OUT, "utf8").replace(/\r\n/g, "\n") === buildSingle(), "index.single.ts (untuk Dashboard) sama dengan index.ts + parse.js terbaru — jalankan scripts/build-fetch-fiskal-single.mjs bila gagal");
+});
+
+await t.section("audit thumbnail: konversi, yatim, rusak", async () => {
+  const U = (p) => "https://sjgsrposlucbkabxaodm.supabase.co/storage/v1/object/public/thumbnails/" + p;
+  const now = Date.parse("2026-11-05T12:00:00Z"), old = "2026-10-01T00:00:00Z", fresh = new Date(now - 60000).toISOString();
+  t.ok([...bucketPathsIn(`a ![x](${U("a%20b.png")}) b <img src="${U("c.jpg")}?v=1"> ${U("c.jpg")}`)].join() === "a b.png,c.jpg", "path di markdown/HTML ditemukan, di-decode, tanpa duplikat & query");
+  t.ok(bucketPathsIn("https://lain.example/x.png").size === 0 && bucketPathsIn(null).size === 0, "URL luar / kosong diabaikan");
+  const f = (path, mimetype, created_at = old) => ({ path, mimetype, size: 1000, created_at });
+  const r = audit({
+    now,
+    files: [f("a.png", "image/png"), f("b.webp", "image/webp"), f("c.jpg", "image/jpeg"), f("isi.png", "image/png"), f("banner.jpg", "image/jpeg"),
+      f("hal.png", "image/png"), f("yatim.png", "image/png"), f("baru.png", "image/png", fresh), f(".emptyFolderPlaceholder", null), f("lama/sub.jpg", "image/jpeg")],
+    articles: [
+      { id: 1, title: "A", thumbnail_url: U("a.png"), content: "" },
+      { id: 2, title: "B", thumbnail_url: U("b.webp"), content: `![](${U("c.jpg")})` },
+      { id: 3, title: "C", thumbnail_url: U("c.jpg"), content: `![](${U("isi.png")})` },
+      { id: 4, title: "D", thumbnail_url: U("a.png"), content: "" },
+      { id: 5, title: "E", thumbnail_url: U("hilang.png"), content: "" },
+      { id: 6, title: "F", thumbnail_url: "https://luar.example/x.png", content: "" },
+    ],
+    banners: [{ id: 1, title: "Promo", image_url: U("banner.jpg") }],
+    pages: [{ id: 1, title: "Tentang", content: `![](${U("hal.png")})` }],
+  });
+  t.ok(r.convert.map((c) => c.file.path).sort().join() === "a.png,c.jpg", "hanya thumbnail non-WEBP yang dikonversi", JSON.stringify(r.convert.map((c) => c.file.path)));
+  t.ok(r.convert.find((c) => c.file.path === "a.png").articles.map((a) => a.id).join() === "1,4", "satu file dipakai dua artikel: dikonversi sekali, keduanya diperbarui");
+  t.ok(r.convert.find((c) => c.file.path === "c.jpg").usedElsewhere.length === 1, "file yang juga disebut di isi artikel ditandai (file lama tidak dihapus)");
+  t.ok(r.orphans.map((x) => x.path).sort().join() === "lama/sub.jpg,yatim.png", "yatim = tidak dirujuk di thumbnail/isi/banner/halaman", JSON.stringify(r.orphans.map((x) => x.path)));
+  t.ok(r.recent.map((x) => x.path).join() === "baru.png" && ORPHAN_GRACE_MS > 0, "file yang baru diunggah tidak ditawarkan untuk dihapus");
+  t.ok(!r.files.some((x) => x.path === ".emptyFolderPlaceholder"), "penanda folder Supabase diabaikan");
+  t.ok(r.broken.length === 1 && r.broken[0].article.id === 5, "thumbnail yang filenya hilang terdeteksi; URL luar bukan urusan bucket");
+  t.ok(r.webpCount === 1 && r.files.length === 9, "ringkasan jumlah file & WEBP");
 });
 
 process.exit(t.summary() ? 0 : 1);
